@@ -4,7 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SimpleIntegrationAi.WPF"
-        xmlns:controls="clr-namespace:SimpleIntegrationAi.WPF.Controls"
+        xmlns:controls="clr-namespace:SimpleIntegrationAi.WPF.Controls" 
+        xmlns:viewmodel="clr-namespace:SimpleIntegrationAi.WPF.ViewModels" 
+        d:DataContext="{d:DesignInstance Type=viewmodel:MainWindowViewModel}"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
@@ -13,8 +15,17 @@
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
-        <controls:NavigationBar Grid.Row="0" DataContext="{Binding Navigator}"/>
-        <ContentControl Grid.Row="1" Content="{Binding Navigator.CurrentViewModel}"/>
+        <Menu>
+            <MenuItem Header="Load File" Command="{Binding MenuViewModel.LoadFileCommand}"></MenuItem>
+            <MenuItem Header="Ai Query">
+                <MenuItem Header="Add 10 words for list" Command="{Binding MenuViewModel.AddRelatedEntitiesForMessageCollectionAsyncCommand }"></MenuItem>
+                <MenuItem Header="Add Properties" Command="{Binding MenuViewModel.AddPropetiesForMessageCollectionAsyncCommand}"></MenuItem>
+            </MenuItem>
+            <MenuItem Header="Add Item" Command="{Binding MenuViewModel.AddItemCommand}"></MenuItem>
+        </Menu>
+       <ListBox Grid.Row="1" ItemsSource="{Binding Items}">
+
+       </ListBox>
 
         <StatusBar Grid.Row="2">
             <StatusBarItem Content="Version 0.0.1"></StatusBarItem>
