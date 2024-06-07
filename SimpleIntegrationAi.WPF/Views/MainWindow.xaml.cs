@@ -11,7 +11,6 @@ namespace SimpleIntegrationAi.WPF.Views
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new MainWindowViewModel();
         }
     }
 }

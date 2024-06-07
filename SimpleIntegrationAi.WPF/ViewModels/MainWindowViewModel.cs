@@ -1,6 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using AiTestLibrary.Classes;
 using AiTestLibrary.Interfaces;
@@ -9,25 +11,33 @@ using Microsoft.Win32;
 using SimpleIntegrationAi.Domain.Models;
 using SimpleIntegrationAi.Domain.Services;
 using SimpleIntegrationAi.WPF.Commands;
+using SimpleIntegrationAi.WPF.Dialogs;
 
 namespace SimpleIntegrationAi.WPF.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {
     private readonly AsyncCommand _loadFileCommand;
-    private readonly IYandexGpt _yandexGpt = new YandexGpt();
-    private readonly IResponseParser _responseParser = new ResponseParser();
+    private readonly IYandexGpt _yandexGpt;
+    private readonly IResponseParser _responseParser;
     private ObservableCollection<MessageItem> _items;
     private readonly string foledrId = "b1gphb1c693npe94nmrv";
 
     private readonly string iamtoken =
         "t1.9euelZqWnZWKm4qZl5bKk4qMy5jIku3rnpWam46WzZKSlMaVjsycjZCZksjl8_cKH3RM-e9xQHwh_d3z90pNcUz573FAfCH9zef1656VmprOipLJxpSSlciOlMrMjMyN7_zF656VmprOipLJxpSSlciOlMrMjMyN.03noIyK_w1so2oFjDdKxohFTXnNoYBtLS_j70h7P4nt8tPukrTKjqKGZWADqf50gquIkxonrWzWxqsGUvIDYDQ";
 
-    public MainWindowViewModel()
+    private readonly Command _addEntityCommand;
+
+    public MainWindowViewModel(IYandexGpt yandexGpt, IResponseParser responseParser)
     {
+        _addEntityCommand = new Command(AddEntity);
         _loadFileCommand = new AsyncCommand(LoadFile);
+        _yandexGpt = yandexGpt;
+        _items = new ObservableCollection<MessageItem>();
+        _responseParser = responseParser;
     }
 
+    public ICommand AddEntityCommand => _addEntityCommand;
     public ICommand LoadFileCommand => _loadFileCommand;
 
     public ObservableCollection<MessageItem> Items
@@ -81,5 +91,20 @@ public class MainWindowViewModel : ViewModelBase
         foreach (var msg in parsedMessage)
             Items.Add(new MessageItem(msg));
         
+    }
+
+    private void AddEntity()
+    {
+        var addEntityViewModel = new AddEntityDialogViewModel();
+        var addEntityView = new AddEntityDialog
+        {
+            DataContext = addEntityViewModel
+        };
+
+        var dialogResult = addEntityView.ShowDialog();
+        if (dialogResult == true)
+        {
+            Items.Add(new MessageItem(addEntityViewModel.EntityName));
+        }
     }
 }

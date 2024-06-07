@@ -25,10 +25,10 @@ public class UpdateCurrentViewModelCommand : ICommand
             switch (viewType)
             {
                 case ViewType.Home:
-                    _navigator.CurrentViewModel = new MainWindowViewModel();
+                    _navigator.CurrentViewModel = null;
                     break;
                 case ViewType.About:
-                    _navigator.CurrentViewModel = new MainWindowViewModel();
+                    _navigator.CurrentViewModel = null;
                     break;
                 default:
                     break;
