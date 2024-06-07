@@ -1,8 +1,8 @@
 ﻿namespace SimpleIntegrationAi.Domain.Models;
 
-public class MessageItem
+public class MessageEntity
 {
-    public MessageItem(string message)
+    public MessageEntity(string message)
     {
         Message = message;
     }

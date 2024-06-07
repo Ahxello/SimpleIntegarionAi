@@ -18,17 +18,22 @@
         <Menu>
             <MenuItem Header="Load File" Command="{Binding LoadFileCommand}"></MenuItem>
             <MenuItem Header="Ai Query">
-                <MenuItem Header="Add 10 words for list" Command="{Binding MenuViewModel.AddRelatedEntitiesForMessageCollectionAsyncCommand }"></MenuItem>
-                <MenuItem Header="Add Properties" Command="{Binding MenuViewModel.AddPropetiesForMessageCollectionAsyncCommand}"></MenuItem>
+                <MenuItem Header="Add related entities" Command="{Binding AddRelatedEntitiesCommand }"></MenuItem>
+                <MenuItem Header="Add Properties" Command="{Binding AddPropetiesForMessageCollectionAsyncCommand}"></MenuItem>
             </MenuItem>
             <MenuItem Header="Add Item" Command="{Binding AddEntityCommand}"></MenuItem>
         </Menu>
-       <ListBox Grid.Row="1" ItemsSource="{Binding Items}">
+        <ListBox Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedEntity }">
            <ListBox.ItemTemplate>
                <DataTemplate>
                     <TextBlock Text="{Binding Message}" />
                </DataTemplate>
            </ListBox.ItemTemplate>
+           <ListBox.ContextMenu>
+               <ContextMenu>
+                   <MenuItem Header="Delete Entity" Command="{Binding DeleteEntityCommand}"></MenuItem>
+               </ContextMenu>
+           </ListBox.ContextMenu>
 
         </ListBox>
 
