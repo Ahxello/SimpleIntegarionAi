@@ -12,4 +12,19 @@
     <Folder Include="Styles\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="GemBox.Document" Version="35.0.1784" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SimpleIntegrationAi.Domain\SimpleIntegrationAi.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="AiTestLibrary">
+      <HintPath>..\..\AiTestLibrary\bin\Debug\net8.0\AiTestLibrary.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

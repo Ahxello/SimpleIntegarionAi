@@ -16,7 +16,7 @@
             <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
         <Menu>
-            <MenuItem Header="Load File" Command="{Binding MenuViewModel.LoadFileCommand}"></MenuItem>
+            <MenuItem Header="Load File" Command="{Binding LoadFileCommand}"></MenuItem>
             <MenuItem Header="Ai Query">
                 <MenuItem Header="Add 10 words for list" Command="{Binding MenuViewModel.AddRelatedEntitiesForMessageCollectionAsyncCommand }"></MenuItem>
                 <MenuItem Header="Add Properties" Command="{Binding MenuViewModel.AddPropetiesForMessageCollectionAsyncCommand}"></MenuItem>
@@ -24,8 +24,13 @@
             <MenuItem Header="Add Item" Command="{Binding MenuViewModel.AddItemCommand}"></MenuItem>
         </Menu>
        <ListBox Grid.Row="1" ItemsSource="{Binding Items}">
+           <ListBox.ItemTemplate>
+               <DataTemplate>
+                    <TextBlock Text="{Binding Message}" />
+               </DataTemplate>
+           </ListBox.ItemTemplate>
 
-       </ListBox>
+        </ListBox>
 
         <StatusBar Grid.Row="2">
             <StatusBarItem Content="Version 0.0.1"></StatusBarItem>
