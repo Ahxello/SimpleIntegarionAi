@@ -9,7 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Styles\" />
+    <Folder Include="Views\" />
+    <Folder Include="Controls\" />
+    <Folder Include="State\" />
+    <Folder Include="Новая папка\" />
   </ItemGroup>
 
 </Project>
