@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="GemBox.Document" Version="35.0.1784" />
+    <PackageReference Include="MahApps.Metro.IconPacks" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>

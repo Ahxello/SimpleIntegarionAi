@@ -15,20 +15,34 @@ namespace SimpleIntegrationAi.WPF.ViewModels;
 public class MainWindowViewModel : ViewModelBase
 {
     private readonly Command _addEntityCommand;
+
     private readonly AsyncCommand _addRelatedEntitiesCommand;
+
     private readonly Command _deleteEntityCommand;
+
     private readonly AsyncCommand _loadFileCommand;
+
     private readonly AsyncCommand _addPropertiesCommand;
+
     private readonly IResponseParser _responseParser;
+
     private readonly IYandexGpt _yandexGpt;
+
     private readonly Command _addEntityPropertyCommand;
+
+    private readonly Command _moveSelectedEntityCommand;
+
+    private readonly Command _moveAllEntitiesCommand;
+
     private readonly string foledrId = "b1gphb1c693npe94nmrv";
 
     private readonly string iamtoken =
         "t1.9euelZqcmcbHysqXk5rJjYrKj5aekO3rnpWam46WzZKSlMaVjsycjZCZksjl8_cbfW5M-e9iJD1n_N3z91srbEz572IkPWf8zef1656VmpHPzImTk5bOi5fMxpCNl8mO7_zF656VmpHPzImTk5bOi5fMxpCNl8mO.qj0-znv45zKOSoZwadIodEDn47PjuF_F-OPRl1Lsq24tZopMt7HU3JPu33owyf-r9tUOpC0sRTdUDf0pa61mCQ";
 
-    private ObservableCollection<MessageEntity> _items;
-    private MessageEntity _selectedEntity;
+    private ObservableCollection<MessageEntity> _temporaryEntities;
+    private ObservableCollection<MessageEntity> _permanentEntities;
+    private MessageEntity _selectedTemporaryEntity;
+    private MessageEntity _selectedPermanentEntity;
 
     public MainWindowViewModel(IYandexGpt yandexGpt, IResponseParser responseParser)
     {
@@ -38,7 +52,9 @@ public class MainWindowViewModel : ViewModelBase
 
         _yandexGpt = yandexGpt;
 
-        _items = new ObservableCollection<MessageEntity>();
+        _temporaryEntities = new ObservableCollection<MessageEntity>();
+
+        _permanentEntities = new ObservableCollection<MessageEntity>();
 
         _responseParser = responseParser;
 
@@ -49,6 +65,11 @@ public class MainWindowViewModel : ViewModelBase
         _deleteEntityCommand = new Command(DeleteEntity);
 
         _addPropertiesCommand = new AsyncCommand(AddProperties);
+
+        _moveSelectedEntityCommand = new Command(MoveSelectedEntity);
+
+        _moveAllEntitiesCommand = new Command(MoveAllEntities);
+
     }
 
     public ICommand AddEntityCommand => _addEntityCommand;
@@ -57,22 +78,39 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand DeleteEntityCommand => _deleteEntityCommand;
     public ICommand AddPropertiesCommand => _addPropertiesCommand;
     public ICommand AddEntityPropertyCommand => _addEntityPropertyCommand;
-
-    public MessageEntity SelectedEntity
+    public ICommand MoveSelectedEntityCommand => _moveSelectedEntityCommand;
+    public ICommand MoveAllEntitiesCommand => _moveAllEntitiesCommand;
+    public MessageEntity SelectedTemporaryEntity
     {
-        get => _selectedEntity;
+        get => _selectedTemporaryEntity;
         set
         {
-            _selectedEntity = value;
-            SetField(ref _selectedEntity, value);
+            _selectedTemporaryEntity = value;
+            SetField(ref _selectedTemporaryEntity, value);
         }
     }
 
-    public ObservableCollection<MessageEntity> Items
+    public ObservableCollection<MessageEntity> TemporaryEntities
     {
-        get => _items;
-        set => SetField(ref _items, value);
+        get => _temporaryEntities;
+        set => SetField(ref _temporaryEntities, value);
     }
+
+    public MessageEntity SelectedPermanentEntity
+    {
+        get => _selectedPermanentEntity;
+        set
+        {
+            _selectedPermanentEntity = value;
+            SetField(ref _selectedPermanentEntity, value);
+        }
+    }
+    public ObservableCollection<MessageEntity> PermanentEntities
+    {
+        get => _permanentEntities;
+        set => SetField(ref _permanentEntities, value);
+    }
+
 
     private async Task LoadFile()
     {
@@ -90,13 +128,13 @@ public class MainWindowViewModel : ViewModelBase
                 ComponentInfo.SetLicense("FREE-LIMITED-KEY");
                 var document = DocumentModel.Load(filePath);
                 var messageViewModel = new MessageEntity(document.Content.ToString());
-                Items = [messageViewModel];
+                TemporaryEntities = [messageViewModel];
             }
 
             else if (fileExtension == ".txt")
             {
                 var messageViewModel = new MessageEntity(File.ReadAllText(filePath));
-                Items = [messageViewModel];
+                TemporaryEntities = [messageViewModel];
             }
 
             if (filePath != null)
@@ -111,7 +149,7 @@ public class MainWindowViewModel : ViewModelBase
 
     public async Task InitializeAsync()
     {
-        var result = string.Join(" ", Items.Select(i => i.Message));
+        var result = string.Join(" ", TemporaryEntities.Select(i => i.Message));
 
         var messageCollection =
             await _yandexGpt.Request($"{result} Выбери из списка сущности и выведи их без описания.", iamtoken,
@@ -119,10 +157,10 @@ public class MainWindowViewModel : ViewModelBase
 
         var parsedMessage = _responseParser.GetMessageAsync(messageCollection);
 
-        Items.Clear();
+        TemporaryEntities.Clear();
 
         foreach (var msg in parsedMessage)
-            Items.Add(new MessageEntity(msg));
+            TemporaryEntities.Add(new MessageEntity(msg));
     }
 
     private void AddEntity()
@@ -134,12 +172,12 @@ public class MainWindowViewModel : ViewModelBase
         };
 
         var dialogResult = addEntityView.ShowDialog();
-        if (dialogResult == true) Items.Add(new MessageEntity(addEntityViewModel.EntityName));
+        if (dialogResult == true) TemporaryEntities.Add(new MessageEntity(addEntityViewModel.EntityName));
     }
 
     public async Task AddRelatedEntites()
     {
-        var result = string.Join(" ", Items.Select(i => i.Message));
+        var result = string.Join(" ", TemporaryEntities.Select(i => i.Message));
         var addRelatedEntityViewModel = new AddRelatedEntityDialogViewModel();
         var addRelatedEntityView = new AddRelatedEntityDialog
         {
@@ -157,13 +195,13 @@ public class MainWindowViewModel : ViewModelBase
             var parsedMessage = _responseParser.GetMessageAsync(messageCollection);
 
             foreach (var msg in parsedMessage)
-                Items.Add(new MessageEntity(msg));
+                TemporaryEntities.Add(new MessageEntity(msg));
         }
     }
 
     public async Task AddProperties()
     {
-        var result = string.Join(" ", Items.Select(i => i.Message));
+        var result = string.Join(" ", TemporaryEntities.Select(i => i.Message));
         var messageCollection =
             await _yandexGpt.Request($"{result} " +
                                      $"Опиши свойства для сущности из списка " +
@@ -172,19 +210,41 @@ public class MainWindowViewModel : ViewModelBase
                 foledrId);
         var parsedMessage = _responseParser.GetMessageAsync(messageCollection);
 
-        Items.Clear();
+        TemporaryEntities.Clear();
 
         foreach (var msg in parsedMessage)
-            Items.Add(new MessageEntity(msg));
+            TemporaryEntities.Add(new MessageEntity(msg));
     }
     private void AddProperty()
     {
-        if(SelectedEntity != null)
-            SelectedEntity.Properties.Add(new DynamicProperty { Name = "New Property", Value = "Value" });
+        if(SelectedTemporaryEntity != null)
+            SelectedTemporaryEntity.Properties.Add(new DynamicProperty { Name = "New Property", Value = "Value" });
+        if (SelectedPermanentEntity != null)
+            SelectedPermanentEntity.Properties.Add(new DynamicProperty { Name = "New Property", Value = "Value" });
     }
 
     private void DeleteEntity()
     {
-        if (SelectedEntity != null) Items.Remove(SelectedEntity);
+        if (SelectedTemporaryEntity != null) TemporaryEntities.Remove(SelectedTemporaryEntity);
+        if (SelectedPermanentEntity != null) PermanentEntities.Remove(SelectedPermanentEntity);
     }
+
+    private void MoveSelectedEntity()
+    {
+        if (SelectedTemporaryEntity != null)
+        {
+            PermanentEntities.Add(SelectedTemporaryEntity);
+            TemporaryEntities.Remove(SelectedTemporaryEntity);
+        }
+    }
+
+    private void MoveAllEntities()
+    {
+        foreach (var entity in TemporaryEntities.ToList())
+        {
+            PermanentEntities.Add(entity);
+        }
+        TemporaryEntities.Clear();
+    }
+
 }
