@@ -23,7 +23,7 @@ public class MainWindowViewModel : ViewModelBase
     private readonly string foledrId = "b1gphb1c693npe94nmrv";
 
     private readonly string iamtoken =
-        "t1.9euelZqWnZWKm4qZl5bKk4qMy5jIku3rnpWam46WzZKSlMaVjsycjZCZksjl8_cKH3RM-e9xQHwh_d3z90pNcUz573FAfCH9zef1656VmprOipLJxpSSlciOlMrMjMyN7_zF656VmprOipLJxpSSlciOlMrMjMyN.03noIyK_w1so2oFjDdKxohFTXnNoYBtLS_j70h7P4nt8tPukrTKjqKGZWADqf50gquIkxonrWzWxqsGUvIDYDQ";
+        "t1.9euelZqcmcbHysqXk5rJjYrKj5aekO3rnpWam46WzZKSlMaVjsycjZCZksjl8_cbfW5M-e9iJD1n_N3z91srbEz572IkPWf8zef1656VmpHPzImTk5bOi5fMxpCNl8mO7_zF656VmpHPzImTk5bOi5fMxpCNl8mO.qj0-znv45zKOSoZwadIodEDn47PjuF_F-OPRl1Lsq24tZopMt7HU3JPu33owyf-r9tUOpC0sRTdUDf0pa61mCQ";
 
     private ObservableCollection<MessageEntity> _items;
 
@@ -83,11 +83,15 @@ public class MainWindowViewModel : ViewModelBase
                 var messageViewModel = new MessageEntity(File.ReadAllText(filePath));
                 Items = [messageViewModel];
             }
+
+            if (filePath != null)
+            {
+                var result = MessageBox.Show("Хотите чтобы ИИ обработал данные файла?", "Повторить?", MessageBoxButton.YesNo);
+
+                if (result == MessageBoxResult.Yes) await InitializeAsync();
+            }
         }
 
-        var result = MessageBox.Show("Хотите чтобы ИИ обработал данные файла?", "Повторить?", MessageBoxButton.YesNo);
-
-        if (result == MessageBoxResult.Yes) await InitializeAsync();
     }
 
     public async Task InitializeAsync()
@@ -121,17 +125,17 @@ public class MainWindowViewModel : ViewModelBase
     public async Task AddRelatedEntites()
     {
         var result = string.Join(" ", Items.Select(i => i.Message));
-        var addEntityViewModel = new AddEntityDialogViewModel();
-        var addEntityView = new AddEntityDialog
+        var addRelatedEntityViewModel = new AddRelatedEntityDialogViewModel();
+        var addRelatedEntityView = new AddRelatedEntityDialog
         {
-            DataContext = addEntityViewModel
+            DataContext = addRelatedEntityViewModel
         };
 
-        var dialogResult = addEntityView.ShowDialog();
+        var dialogResult = addRelatedEntityView.ShowDialog();
         if (dialogResult == true)
         {
             var messageCollection =
-                await _yandexGpt.Request($"Дай мне {addEntityViewModel.EntityName} сущностей, расширяющих мой список"
+                await _yandexGpt.Request($"Дай мне {addRelatedEntityViewModel.EntityCount} сущностей, расширяющих мой список"
                     , iamtoken, foledrId);
 
             var parsedMessage = _responseParser.GetMessageAsync(messageCollection);
@@ -147,9 +151,5 @@ public class MainWindowViewModel : ViewModelBase
         {
             Items.Remove(SelectedEntity);
         }
-    }
-    private bool CanDeleteEntity()
-    {
-        return SelectedEntity != null;
     }
 }

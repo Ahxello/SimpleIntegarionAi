@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SimpleIntegrationAi.WPF.Dialogs"
         mc:Ignorable="d"
-        Title="AddEntityDialog" Height="200" Width="400">
+        Title="AddEntityDialog" Height="100" Width="300">
     <Grid>
         <StackPanel Margin="10">
             <TextBox Text="{Binding EntityName, UpdateSourceTrigger=PropertyChanged}" Width="200" />
