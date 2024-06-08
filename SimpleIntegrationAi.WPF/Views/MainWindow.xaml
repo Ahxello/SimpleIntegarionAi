@@ -15,30 +15,46 @@
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
-        <Menu>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"></ColumnDefinition>
+            <ColumnDefinition Width="1*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Menu Grid.ColumnSpan="2">
             <MenuItem Header="Load File" Command="{Binding LoadFileCommand}"></MenuItem>
             <MenuItem Header="Ai Query">
                 <MenuItem Header="Add related entities" Command="{Binding AddRelatedEntitiesCommand }"></MenuItem>
-                <MenuItem Header="Add Properties" Command="{Binding AddPropetiesForMessageCollectionAsyncCommand}"></MenuItem>
+                <MenuItem Header="Add Properties" Command="{Binding AddPropertiesCommand}"></MenuItem>
             </MenuItem>
             <MenuItem Header="Add Item" Command="{Binding AddEntityCommand}"></MenuItem>
         </Menu>
-        <ListBox Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedEntity }">
-           <ListBox.ItemTemplate>
-               <DataTemplate>
-                    <TextBlock Text="{Binding Message}" />
-               </DataTemplate>
-           </ListBox.ItemTemplate>
-           <ListBox.ContextMenu>
-               <ContextMenu>
-                   <MenuItem Header="Delete Entity" Command="{Binding DeleteEntityCommand}"></MenuItem>
-               </ContextMenu>
-           </ListBox.ContextMenu>
+            <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedEntity}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Expander Header="{Binding Message}" IsExpanded="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ListBoxItem}}, 
+                            Path=IsSelected}">
+                            <ItemsControl ItemsSource="{Binding Properties}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBox Text="{Binding Name}" Width="100" />
+                                            <TextBox Text="{Binding Value}" Width="200" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Delete Entity" Command="{Binding DeleteEntityCommand}"></MenuItem>
+                        <MenuItem Header="Add Property" Command="{Binding  AddEntityPropertyCommand}" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+            </ListBox>
 
-        </ListBox>
-
-        <StatusBar Grid.Row="2">
-            <StatusBarItem Content="Version 0.0.1"></StatusBarItem>
+        <StatusBar Grid.ColumnSpan="2" Grid.Row="2">
+            <StatusBarItem Content="Version 0.1.0"></StatusBarItem>
         </StatusBar>
 
     </Grid>

@@ -15,34 +15,48 @@ namespace SimpleIntegrationAi.WPF.ViewModels;
 public class MainWindowViewModel : ViewModelBase
 {
     private readonly Command _addEntityCommand;
-    private readonly AsyncCommand _loadFileCommand;
-    private readonly IResponseParser _responseParser;
-    private readonly IYandexGpt _yandexGpt;
     private readonly AsyncCommand _addRelatedEntitiesCommand;
     private readonly Command _deleteEntityCommand;
+    private readonly AsyncCommand _loadFileCommand;
+    private readonly AsyncCommand _addPropertiesCommand;
+    private readonly IResponseParser _responseParser;
+    private readonly IYandexGpt _yandexGpt;
+    private readonly Command _addEntityPropertyCommand;
     private readonly string foledrId = "b1gphb1c693npe94nmrv";
 
     private readonly string iamtoken =
         "t1.9euelZqcmcbHysqXk5rJjYrKj5aekO3rnpWam46WzZKSlMaVjsycjZCZksjl8_cbfW5M-e9iJD1n_N3z91srbEz572IkPWf8zef1656VmpHPzImTk5bOi5fMxpCNl8mO7_zF656VmpHPzImTk5bOi5fMxpCNl8mO.qj0-znv45zKOSoZwadIodEDn47PjuF_F-OPRl1Lsq24tZopMt7HU3JPu33owyf-r9tUOpC0sRTdUDf0pa61mCQ";
 
     private ObservableCollection<MessageEntity> _items;
+    private MessageEntity _selectedEntity;
 
     public MainWindowViewModel(IYandexGpt yandexGpt, IResponseParser responseParser)
     {
         _addEntityCommand = new Command(AddEntity);
+
         _loadFileCommand = new AsyncCommand(LoadFile);
+
         _yandexGpt = yandexGpt;
+
         _items = new ObservableCollection<MessageEntity>();
+
         _responseParser = responseParser;
+
+        _addEntityPropertyCommand = new Command(AddProperty);
+
         _addRelatedEntitiesCommand = new AsyncCommand(AddRelatedEntites);
+
         _deleteEntityCommand = new Command(DeleteEntity);
+
+        _addPropertiesCommand = new AsyncCommand(AddProperties);
     }
 
     public ICommand AddEntityCommand => _addEntityCommand;
     public ICommand LoadFileCommand => _loadFileCommand;
     public ICommand AddRelatedEntitiesCommand => _addRelatedEntitiesCommand;
     public ICommand DeleteEntityCommand => _deleteEntityCommand;
-    private MessageEntity _selectedEntity;
+    public ICommand AddPropertiesCommand => _addPropertiesCommand;
+    public ICommand AddEntityPropertyCommand => _addEntityPropertyCommand;
 
     public MessageEntity SelectedEntity
     {
@@ -53,6 +67,7 @@ public class MainWindowViewModel : ViewModelBase
             SetField(ref _selectedEntity, value);
         }
     }
+
     public ObservableCollection<MessageEntity> Items
     {
         get => _items;
@@ -86,12 +101,12 @@ public class MainWindowViewModel : ViewModelBase
 
             if (filePath != null)
             {
-                var result = MessageBox.Show("Хотите чтобы ИИ обработал данные файла?", "Повторить?", MessageBoxButton.YesNo);
+                var result = MessageBox.Show("Хотите чтобы ИИ обработал данные файла?", "Повторить?",
+                    MessageBoxButton.YesNo);
 
                 if (result == MessageBoxResult.Yes) await InitializeAsync();
             }
         }
-
     }
 
     public async Task InitializeAsync()
@@ -135,7 +150,8 @@ public class MainWindowViewModel : ViewModelBase
         if (dialogResult == true)
         {
             var messageCollection =
-                await _yandexGpt.Request($"Дай мне {addRelatedEntityViewModel.EntityCount} сущностей, расширяющих мой список"
+                await _yandexGpt.Request(
+                    $"Дай мне {addRelatedEntityViewModel.EntityCount} сущностей, расширяющих мой список"
                     , iamtoken, foledrId);
 
             var parsedMessage = _responseParser.GetMessageAsync(messageCollection);
@@ -145,11 +161,30 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public async Task AddProperties()
+    {
+        var result = string.Join(" ", Items.Select(i => i.Message));
+        var messageCollection =
+            await _yandexGpt.Request($"{result} " +
+                                     $"Опиши свойства для сущности из списка " +
+                                     $"для дальнейшего внесения данных в БД " +
+                                     $"с их типами данных", iamtoken,
+                foledrId);
+        var parsedMessage = _responseParser.GetMessageAsync(messageCollection);
+
+        Items.Clear();
+
+        foreach (var msg in parsedMessage)
+            Items.Add(new MessageEntity(msg));
+    }
+    private void AddProperty()
+    {
+        if(SelectedEntity != null)
+            SelectedEntity.Properties.Add(new DynamicProperty { Name = "New Property", Value = "Value" });
+    }
+
     private void DeleteEntity()
     {
-        if (SelectedEntity != null)
-        {
-            Items.Remove(SelectedEntity);
-        }
+        if (SelectedEntity != null) Items.Remove(SelectedEntity);
     }
 }

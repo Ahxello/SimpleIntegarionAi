@@ -1,27 +1,28 @@
-﻿using System.Collections.ObjectModel;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace SimpleIntegrationAi.Domain.Models;
 
-public class MessageEntity : INotifyPropertyChanged
+public class DynamicProperty : INotifyPropertyChanged
 {
-    private ObservableCollection<DynamicProperty> _properties;
+    private string _name;
+    private object _value;
 
-    public MessageEntity(string message)
+    public string Name
     {
-        Message = message;
-        Properties = new ObservableCollection<DynamicProperty>();
-    }
-
-    public string Message { get; init; }
-
-    public ObservableCollection<DynamicProperty> Properties
-    {
-        get => _properties;
+        get => _name;
         set
         {
-            if (_properties != value) SetField(ref _properties, value);
+            if (_name != value) SetField(ref _name, value);
+        }
+    }
+
+    public object Value
+    {
+        get => _value;
+        set
+        {
+            if (_value != value) SetField(ref _value, value);
         }
     }
 
