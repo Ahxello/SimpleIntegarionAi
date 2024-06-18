@@ -10,17 +10,7 @@ namespace SimpleIntegrationAi.Domain.Models
     public class Entity
     {
         public string Name { get; set; }
-        public string Description { get; set; }
-        public List<Field> Fields { get; set; }
-
-        public Entity(string name)
-        {
-            Name = name;
-            Fields = new List<Field>();
-        }
-        public void AddField(string fieldName, string dataType)
-        {
-            Fields.Add(new Field(fieldName, dataType));
-        }
+        public List<string> Fields { get; set; }
+        public List<Dictionary<string, string>> Data { get; set; }
     }
 }

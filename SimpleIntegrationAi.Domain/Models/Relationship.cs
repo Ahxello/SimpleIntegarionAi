@@ -9,16 +9,8 @@ namespace SimpleIntegrationAi.Domain.Models
 {
     public class Relationship
     {
-        public string Entity1 { get; set; } 
-        public string Entity2 { get; set; } 
+        public string From { get; set; }
+        public string To { get; set; }
         public string Type { get; set; }
-
-        public Relationship(string entity1, string entity2, string type)
-        {
-            Entity1 = entity1;
-            Entity2 = entity2;
-            Type = type;
-            
-        }
     }
 }
