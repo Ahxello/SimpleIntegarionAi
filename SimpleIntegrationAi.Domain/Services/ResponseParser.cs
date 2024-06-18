@@ -1,67 +1,69 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using SimpleIntegrationAi.Domain.Models;
-using System.Text;
-using System.Data.SqlClient;
+﻿using SimpleIntegrationAi.Domain.Models;
 using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SimpleIntegrationAi.Domain.Services;
 
+public enum Cardinality
+{
+    OneToOne,
+    OneToMany,
+    ManyToOne,
+    ManyToMany
+}
+
 public class ResponseParser : IResponseParser
 {
-    private string connectionString = "sadadsa";
 
-    public string[] GetMessageAsync(string json)
+    public ResponseParser()
     {
-        try
-        {
-            JObject parsedJson = JObject.Parse(json);
-            string text = parsedJson["result"]["alternatives"][0]["message"]["text"].ToString();
-
-            return text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            ;
-        }
-        catch (JsonException ex)
-        {
-            Console.WriteLine($"Ошибка при парсинге JSON: {ex.Message}");
-            return new string[0];
-        }
     }
 
-    public List<EntityInfo> ParseEntities(string entitiesText)
+    public void Parse(string[] lines, Dictionary<string, List<string>> entities, Dictionary<string, List<string>> data, List<(string from, string to, string type)> relationships)
     {
-        List<EntityInfo> entities = new List<EntityInfo>();
+        string currentEntity = null;
+        bool parsingFields = false, parsingData = false;
 
-        // Define regex patterns
-        string entityPattern = @"\*\*([^*]+)\*\*\s*Fields\s*(.*?)\s*(?=\*\*[^*]+|\z)";
-        string fieldPattern = @"\* \*\*([^*]+)\*\*(?: \(([^\)]+)\))?";
-
-        // Match entities using regex
-        MatchCollection entityMatches = Regex.Matches(entitiesText, entityPattern, RegexOptions.Singleline);
-
-        foreach (Match entityMatch in entityMatches)
+        foreach (var line in lines)
         {
-            EntityInfo entity = new EntityInfo();
-            entity.Fields = new List<EntityField>();
-
-            // Extract entity name
-            entity.Name = entityMatch.Groups[1].Value.Trim();
-
-            // Match fields using regex
-            MatchCollection fieldMatches = Regex.Matches(entityMatch.Groups[2].Value, fieldPattern);
-
-            foreach (Match fieldMatch in fieldMatches)
+            if (line.StartsWith("Entity:"))
             {
-                string fieldName = fieldMatch.Groups[1].Value.Trim();
-                string fieldType = fieldMatch.Groups[2].Value.Trim();
-
-                entity.Fields.Add(new EntityField { Name = fieldName, Type = fieldType });
+                currentEntity = line.Split(':')[1].Trim();
+                entities[currentEntity] = new List<string>{ }; // Primary key for all entities
+                data[currentEntity] = new List<string>();
+                parsingFields = false;
+                parsingData = false;
             }
-
-            entities.Add(entity);
+            else if (line.StartsWith("Fields"))
+            {
+                parsingFields = true;
+                parsingData = false;
+            }
+            else if (line.StartsWith("Relationships:"))
+            {
+                parsingFields = false;
+                parsingData = false;
+            }
+            else if (line.Contains("-") && line.Contains(":"))
+            {
+                var parts = line.Split(new[] { '-', ':' }, StringSplitOptions.RemoveEmptyEntries);
+                relationships.Add((parts[0].Trim(), parts[1].Trim(), parts[2].Trim()));
+            }
+            else if (line.StartsWith("Детализированный анализ"))
+            {
+                parsingFields = false;
+                parsingData = true;
+            }
+            else if (!string.IsNullOrWhiteSpace(line))
+            {
+                if (parsingFields && currentEntity != null)
+                {
+                    entities[currentEntity].Add(line.Trim());
+                }
+                else if (parsingData && currentEntity != null)
+                {
+                    data[currentEntity].Add(line.Trim());
+                }
+            }
         }
-
-        return entities;
     }
 }

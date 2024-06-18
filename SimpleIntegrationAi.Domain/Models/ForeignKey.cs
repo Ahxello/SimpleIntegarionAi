@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 
 namespace SimpleIntegrationAi.Domain.Models
 {
-    public class EntityInfo
+    public class ForeignKey
     {
-        public string Name { get; set; }
-        public List<EntityField> Fields { get; set; }
+        public string EntityName { get; set; }
     }
 }

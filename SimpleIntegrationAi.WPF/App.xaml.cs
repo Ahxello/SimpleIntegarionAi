@@ -31,6 +31,7 @@ public partial class App : Application
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IResponseParser, ResponseParser>();
         services.AddSingleton<IYandexGpt, YandexGpt>();
+        services.AddSingleton<IGeminiGpt, GeminiGpt>();
 
         services.AddScoped<MainWindowViewModel>();
 

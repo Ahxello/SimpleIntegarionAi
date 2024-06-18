@@ -6,6 +6,5 @@ namespace SimpleIntegrationAi.Domain.Services;
 
 public interface IResponseParser
 {
-    string[] GetMessageAsync(string json);
-    List<EntityInfo> ParseEntities(string jsonResponse);
+    void Parse (string[] lines, Dictionary<string, List<string>> entities, Dictionary<string, List<string>> data, List<(string from, string to, string type)> relationships);
 }
