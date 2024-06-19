@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Windows;
@@ -44,7 +45,7 @@ public class MainWindowViewModel : ViewModelBase
     private readonly string iamtoken =
         "t1.9euelZqYnZ3ImpyelJ6ayZKal5aRz-3rnpWam46WzZKSlMaVjsycjZCZksjl8_dna0pM-e9kdS9d_N3z9ycaSEz572R1L138zef1656Vmp6WxpXNks3Il5GJnsiRkpiY7_zF656Vmp6WxpXNks3Il5GJnsiRkpiY.Xuyhnc6xzrdkOPKi54WTlnMny4T41YI7FVYrOueiPFfjxVuv7fBYLrSJFanKJYAHvq7PrEXYAsnSe3J2iw7vDQ";
 
-    private ObservableCollection<Dictionary<string, object>> _data;
+    private DataTable _data;
 
     private ObservableCollection<Entity> _databaseEntities;
     private ObservableCollection<string> _fields;
@@ -82,7 +83,7 @@ public class MainWindowViewModel : ViewModelBase
         _loadDataCommand = new Command(LoadData);
 
         FieldTypes = new ObservableCollection<string> { "NVARCHAR(MAX)", "INT", "FLOAT", "DATETIME" }; // Пример типов полей
-
+        CreateLocalDatabase();
         LoadTables();
     }
 
@@ -98,7 +99,12 @@ public class MainWindowViewModel : ViewModelBase
     public string SelectedTable
     {
         get => _selectedTable;
-        set => SetField(ref _selectedTable, value);
+        set
+        {
+            SetField(ref _selectedTable, value);
+            LoadFields();
+            LoadData();
+        } 
     }
     public ObservableCollection<string> FieldTypes { get; set; }
     public string NewTableName
@@ -137,7 +143,7 @@ public class MainWindowViewModel : ViewModelBase
         set => SetField(ref _fields, value);
     }
 
-    public ObservableCollection<Dictionary<string, object>> Data
+    public DataTable Data
     {
         get => _data;
         set => SetField(ref _data, value);
@@ -146,15 +152,6 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand LoadFileCommand => _loadFileCommand;
     public ICommand LoadApiResponseCommand => _loadApiResponseCommand;
 
-    public Product SelectedTemporaryEntity
-    {
-        get => _selectedTemporaryEntity;
-        set
-        {
-            _selectedTemporaryEntity = value;
-            SetField(ref _selectedTemporaryEntity, value);
-        }
-    }
 
     public ObservableCollection<Product> TemporaryEntities
     {
@@ -172,6 +169,8 @@ public class MainWindowViewModel : ViewModelBase
             Tables = new ObservableCollection<string>(tables);
             dbHelper.CloseConnection();
         }
+        LoadFields();
+        LoadData();
     }
 
     private void RenameTable()
@@ -202,6 +201,7 @@ public class MainWindowViewModel : ViewModelBase
         }
 
         LoadFields();
+        LoadData();
     }
 
     private void AddField()
@@ -217,6 +217,7 @@ public class MainWindowViewModel : ViewModelBase
         }
 
         LoadFields();
+        LoadData();
     }
 
     private void LoadFields()
@@ -228,9 +229,9 @@ public class MainWindowViewModel : ViewModelBase
         {
             dbHelper.OpenConnection();
             var data = dbHelper.GetData(SelectedTable);
-            if (data.Count > 0)
+            if (data.Rows.Count > 0)
             {
-                Fields = new ObservableCollection<string>(data[0].Keys);
+                Fields = new ObservableCollection<string>(data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
             }
             else
             {
@@ -249,10 +250,11 @@ public class MainWindowViewModel : ViewModelBase
         {
             dbHelper.OpenConnection();
             var data = dbHelper.GetData(SelectedTable);
-            Data = new ObservableCollection<Dictionary<string, object>>(data);
+            Data = data;
             dbHelper.CloseConnection();
         }
     }
+
 
     public async Task InitializeAsync()
     {
@@ -284,18 +286,12 @@ public class MainWindowViewModel : ViewModelBase
             if (fileExtension == ".docx")
             {
                 ComponentInfo.SetLicense("FREE-LIMITED-KEY");
-                var document = DocumentModel.Load(filePath);
-                var messageViewModel = new Product(document.Content.ToString());
 
-                TemporaryEntities = [messageViewModel];
-            }
+                //var document = DocumentModel.Load(filePath);
 
-            else if (fileExtension == ".txt")
-            {
                 var lines = File.ReadAllLines(filePath);
                 var parser = new ResponseParser();
                 var ents = parser.Parse(lines);
-                CreateLocalDatabase();
                 using (var dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
@@ -310,11 +306,23 @@ public class MainWindowViewModel : ViewModelBase
                 }
             }
 
-            if (filePath != null)
+            else if (fileExtension == ".txt")
             {
-                var result = MessageBox.Show("Хотите чтобы ИИ обработал данные файла?", "Повторить?",
-                    MessageBoxButton.YesNo);
-                if (result == MessageBoxResult.Yes) await InitializeAsync();
+                var lines = File.ReadAllLines(filePath);
+                var parser = new ResponseParser();
+                var ents = parser.Parse(lines);
+                using (var dbService = new DatabaseService(connectionString))
+                {
+                    dbService.OpenConnection();
+
+                    foreach (var entity in ents)
+                    {
+                        dbService.CreateTable(entity);
+                        dbService.InsertData(entity);
+                    }
+
+                    dbService.CloseConnection();
+                }
             }
         }
     }

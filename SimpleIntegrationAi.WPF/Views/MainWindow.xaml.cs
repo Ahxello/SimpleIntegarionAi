@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using SimpleIntegrationAi.WPF.ViewModels;
 
 namespace SimpleIntegrationAi.WPF.Views
@@ -11,6 +12,10 @@ namespace SimpleIntegrationAi.WPF.Views
         public MainWindow()
         {
             InitializeComponent();
+        }
+        private void OnAutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+        {
+            e.Column.Header = e.PropertyName;
         }
     }
 }

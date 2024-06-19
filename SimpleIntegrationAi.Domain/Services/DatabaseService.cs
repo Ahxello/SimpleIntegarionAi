@@ -1,4 +1,5 @@
 ﻿using SimpleIntegrationAi.Domain.Models;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace SimpleIntegrationAi.Domain.Services;
@@ -143,26 +144,19 @@ public class DatabaseService : IDisposable
         }
     }
 
-    public List<Dictionary<string, object>> GetData(string tableName)
+    public DataTable GetData(string tableName)
     {
-        var data = new List<Dictionary<string, object>>();
-        string query = $"SELECT * FROM {tableName}";
+        var dataTable = new DataTable();
 
-        using (var command = new SqlCommand(query, _connection))
-        using (var reader = command.ExecuteReader())
+        using (var command = new SqlCommand($"SELECT * FROM {tableName};", _connection))
         {
-            while (reader.Read())
+            using (var adapter = new SqlDataAdapter(command))
             {
-                var row = new Dictionary<string, object>();
-                for (int i = 0; i < reader.FieldCount; i++)
-                {
-                    row[reader.GetName(i)] = reader.GetValue(i);
-                }
-                data.Add(row);
+                adapter.Fill(dataTable);
             }
         }
 
-        return data;
+        return dataTable;
     }
     public void Dispose()
     {
