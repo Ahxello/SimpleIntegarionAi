@@ -15,11 +15,6 @@
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="10*"></ColumnDefinition>
-            <ColumnDefinition Width="50px"></ColumnDefinition>
-            <ColumnDefinition Width="10*"></ColumnDefinition>
-        </Grid.ColumnDefinitions>
         <Menu Grid.ColumnSpan="3">
             <MenuItem Header="Load File" Command="{Binding LoadFileCommand}"></MenuItem>
             <MenuItem Header="Ai Query">
@@ -27,9 +22,31 @@
             </MenuItem>
             <MenuItem Header="Add RItem NWork" Command="{Binding AddRelatedEntityCommand}"></MenuItem>
         </Menu>
-        <StackPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center">
-            <Button  Content="›"   Command="{Binding MoveSelectedEntityCommand}" Width="30" Height="20"  VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
-            <Button  Content="»" Command="{Binding MoveAllEntitiesCommand}" Width="30" Height="20"/>
+        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Vertical" Margin="10">
+            <ComboBox ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedTable}" Width="200" Margin="0,0,0,10"/>
+            <Button Content="Load Tables" Command="{Binding LoadTablesCommand}" Width="100" Margin="0,0,0,10"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBox Text="{Binding NewTableName}" Width="200" Margin="0,0,10,0"/>
+                <Button Content="Rename Table" Command="{Binding RenameTableCommand}" Width="100"/>
+            </StackPanel>
+
+            <ComboBox ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField}" Width="200" Margin="0,0,0,10"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBox Text="{Binding NewFieldName}" Width="200" Margin="0,0,10,0"/>
+                <Button Content="Rename Field" Command="{Binding RenameFieldCommand}" Width="100"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBox Text="{Binding NewFieldName}" Width="200" Margin="0,0,10,0"/>
+                <ComboBox ItemsSource="{Binding FieldTypes}" SelectedItem="{Binding NewFieldType}" Width="200" Margin="0,0,10,0"/>
+                <Button Content="Add Field" Command="{Binding AddFieldCommand}" Width="100"/>
+            </StackPanel>
+
+            <Button Content="Load Data" Command="{Binding LoadDataCommand}" Width="100" Margin="0,0,0,10"/>
+
+            <DataGrid ItemsSource="{Binding Data}" AutoGenerateColumns="True" Height="200"/>
         </StackPanel>
 
 

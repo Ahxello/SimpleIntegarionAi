@@ -84,7 +84,86 @@ public class DatabaseService : IDisposable
             }
         }
     }
+    public void AddForeignKey(Relationship relationship)
+    {
+        string addForeignKeyQuery = $@"
+            ALTER TABLE {relationship.From} 
+            ADD CONSTRAINT FK_{relationship.From}_{relationship.To} 
+            FOREIGN KEY ({relationship.Type}) REFERENCES {relationship.To}(Id);";
 
+        using (var command = new SqlCommand(addForeignKeyQuery, _connection))
+        {
+            command.ExecuteNonQuery();
+        }
+    }
+    public List<string> GetTableNames()
+    {
+        var tableNames = new List<string>();
+        string query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
+
+        using (var command = new SqlCommand(query, _connection))
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                tableNames.Add(reader.GetString(0));
+            }
+        }
+
+        return tableNames;
+    }
+
+    public void RenameTable(string oldName, string newName)
+    {
+        string query = $"EXEC sp_rename '{oldName}', '{newName}'";
+
+        using (var command = new SqlCommand(query, _connection))
+        {
+            command.ExecuteNonQuery();
+        }
+    }
+
+    public void RenameField(string tableName, string oldFieldName, string newFieldName)
+    {
+        string query = $"EXEC sp_rename '{tableName}.{oldFieldName}', '{newFieldName}', 'COLUMN'";
+
+        using (var command = new SqlCommand(query, _connection))
+        {
+            command.ExecuteNonQuery();
+        }
+    }
+
+    public void AddField(string tableName, string fieldName, string fieldType)
+    {
+        string query = $"ALTER TABLE {tableName} ADD {fieldName} {fieldType}";
+
+        using (var command = new SqlCommand(query, _connection))
+        {
+            command.ExecuteNonQuery();
+        }
+    }
+
+    public List<Dictionary<string, object>> GetData(string tableName)
+    {
+        var data = new List<Dictionary<string, object>>();
+        string query = $"SELECT * FROM {tableName}";
+
+        using (var command = new SqlCommand(query, _connection))
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                var row = new Dictionary<string, object>();
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    row[reader.GetName(i)] = reader.GetValue(i);
+                }
+                data.Add(row);
+            }
+        }
+
+        return data;
+    }
     public void Dispose()
     {
         CloseConnection();
