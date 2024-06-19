@@ -143,6 +143,13 @@ public class DatabaseService : IDisposable
             command.ExecuteNonQuery();
         }
     }
+    public void DeleteField(string tableName, string fieldName)
+    {
+        using (var command = new SqlCommand($"ALTER TABLE {tableName} DROP COLUMN {fieldName};", _connection))
+        {
+            command.ExecuteNonQuery();
+        }
+    }
 
     public DataTable GetData(string tableName)
     {
@@ -157,6 +164,53 @@ public class DatabaseService : IDisposable
         }
 
         return dataTable;
+    }
+    public void AddData(string tableName, DataTable data)
+    {
+        if (data == null || data.Rows.Count == 0)
+            return;
+
+        foreach (DataRow row in data.Rows)
+        {
+            var columns = string.Join(",", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+            var values = string.Join(",", row.ItemArray.Select(v => $"'{v}'"));
+            using (var command = new SqlCommand($"INSERT INTO {tableName} ({columns}) VALUES ({values});", _connection))
+            {
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+    public void DeleteData(string tableName, DataTable data)
+    {
+        if (data == null || data.Rows.Count == 0)
+            return;
+
+        foreach (DataRow row in data.Rows)
+        {
+            var conditions = string.Join(" AND ", data.Columns.Cast<DataColumn>().Select(c => $"{c.ColumnName}='{row[c.ColumnName]}'"));
+            using (var command = new SqlCommand($"DELETE FROM {tableName} WHERE {conditions};", _connection))
+            {
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+    public void UpdateData(string tableName, DataTable data)
+    {
+        if (data == null || data.Rows.Count == 0)
+            return;
+
+        foreach (DataRow row in data.Rows)
+        {
+            if (row.RowState == DataRowState.Modified)
+            {
+                var setClause = string.Join(",", row.Table.Columns.Cast<DataColumn>().Select(c => $"{c.ColumnName}='{row[c.ColumnName]}'"));
+                var conditions = string.Join(" AND ", row.Table.PrimaryKey.Select(pk => $"{pk.ColumnName}='{row[pk.ColumnName]}'"));
+                using (var command = new SqlCommand($"UPDATE {tableName} SET {setClause} WHERE {conditions};", _connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
     }
     public void Dispose()
     {

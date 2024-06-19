@@ -20,7 +20,6 @@
             <MenuItem Header="Ai Query">
                 <MenuItem Header="Load File response" Command="{Binding LoadApiResponseCommand}"></MenuItem>
             </MenuItem>
-            <MenuItem Header="Add RItem NWork" Command="{Binding AddRelatedEntityCommand}"></MenuItem>
         </Menu>
         <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Vertical" Margin="10">
             <ComboBox ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedTable}" Width="200" Margin="0,0,0,10"/>
@@ -44,9 +43,17 @@
                 <Button Content="Add Field" Command="{Binding AddFieldCommand}" Width="100"/>
             </StackPanel>
 
+            <Button Content="Delete Field" Command="{Binding DeleteFieldCommand}" Width="100" Margin="0,0,0,10"/>
+
             <Button Content="Load Data" Command="{Binding LoadDataCommand}" Width="100" Margin="0,0,0,10"/>
 
-            <DataGrid ItemsSource="{Binding Data}" AutoGenerateColumns="True" AutoGeneratingColumn="OnAutoGeneratingColumn" Height="200"/>
+            <Button Content="Add Data" Command="{Binding AddDataCommand}" Width="100" Margin="0,0,0,10"/>
+
+            <Button Content="Delete Data" Command="{Binding DeleteDataCommand}" Width="100" Margin="0,0,0,10"/>
+
+            <Button Content="Save Data" Command="{Binding SaveDataCommand}" Width="100" Margin="0,0,0,10"/>
+
+            <DataGrid ItemsSource="{Binding Data}" AutoGenerateColumns="True" CanUserAddRows="True" CanUserDeleteRows="True" />
         </StackPanel>
 
 

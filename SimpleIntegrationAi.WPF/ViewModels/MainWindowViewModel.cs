@@ -47,24 +47,26 @@ public class MainWindowViewModel : ViewModelBase
 
     private DataTable _data;
 
-    private ObservableCollection<Entity> _databaseEntities;
+
     private ObservableCollection<string> _fields;
     private string _newFieldName;
     private string _newFieldType;
     private string _newTableName;
     private string _selectedField;
     private string _selectedTable;
-    private Product _selectedTemporaryEntity;
     private ObservableCollection<string> _tables;
     private ObservableCollection<Product> _temporaryEntities;
+    private readonly Command _deleteFieldCommand;
+    private readonly Command _deleteDataCommand;
+    private readonly Command _addDataCommand;
+    private readonly Command _saveDataCommand;
+    private DataRowView _selectedDataRow;
 
     public MainWindowViewModel(IYandexGpt yandexGpt, IResponseParser responseParser, IGeminiGpt geminiGpt)
     {
         _yandexGpt = yandexGpt;
 
         _temporaryEntities = new ObservableCollection<Product>();
-
-        _databaseEntities = new ObservableCollection<Entity>();
 
         _responseParser = responseParser;
 
@@ -82,6 +84,14 @@ public class MainWindowViewModel : ViewModelBase
 
         _loadDataCommand = new Command(LoadData);
 
+        _deleteFieldCommand = new Command(DeleteField);
+
+        _deleteDataCommand = new Command(DeleteData);
+
+        _addDataCommand = new Command(AddData);
+
+        _saveDataCommand = new Command(SaveData);
+
         FieldTypes = new ObservableCollection<string> { "NVARCHAR(MAX)", "INT", "FLOAT", "DATETIME" }; // Пример типов полей
         CreateLocalDatabase();
         LoadTables();
@@ -95,7 +105,15 @@ public class MainWindowViewModel : ViewModelBase
 
     public ICommand RenameFieldCommand => _renameFieldCommand;
 
+    public ICommand DeleteFieldCommand => _deleteFieldCommand;
+
+    public ICommand DeleteDataCommand => _deleteDataCommand;
+
+    public ICommand AddDataCommand => _addDataCommand;
+
     public ICommand LoadDataCommand => _loadDataCommand;
+
+    public ICommand SaveDataCommand => _saveDataCommand;
     public string SelectedTable
     {
         get => _selectedTable;
@@ -147,6 +165,16 @@ public class MainWindowViewModel : ViewModelBase
     {
         get => _data;
         set => SetField(ref _data, value);
+    }
+
+    public DataRowView SelectedDataRow
+    {
+        get => _selectedDataRow;
+        set
+        {
+            SetField(ref _selectedDataRow, value);
+            
+        }
     }
 
     public ICommand LoadFileCommand => _loadFileCommand;
@@ -241,6 +269,21 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void DeleteField()
+    {
+        if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(SelectedField))
+            return;
+
+        using (var dbHelper = new DatabaseService(connectionString))
+        {
+            dbHelper.OpenConnection();
+            dbHelper.DeleteField(SelectedTable, SelectedField);
+            dbHelper.CloseConnection();
+        }
+
+        LoadFields();
+        LoadData();
+    }
     private void LoadData()
     {
         if (string.IsNullOrEmpty(SelectedTable))
@@ -254,8 +297,41 @@ public class MainWindowViewModel : ViewModelBase
             dbHelper.CloseConnection();
         }
     }
+    private void DeleteData()
+    {
+        if (SelectedDataRow == null || Data == null)
+            return;
 
+        SelectedDataRow.Row.Delete();
+    }
+    private void SaveData()
+    {
+        if (string.IsNullOrEmpty(SelectedTable) || Data == null)
+            return;
 
+        using (var dbHelper = new DatabaseService(connectionString))
+        {
+            dbHelper.OpenConnection();
+            dbHelper.UpdateData(SelectedTable, Data);
+            dbHelper.CloseConnection();
+        }
+
+        LoadData();
+    }
+    private void AddData()
+    {
+        if (string.IsNullOrEmpty(SelectedTable))
+            return;
+
+        using (var dbHelper = new DatabaseService(connectionString))
+        {
+            dbHelper.OpenConnection();
+            dbHelper.AddData(SelectedTable, Data);
+            dbHelper.CloseConnection();
+        }
+
+        LoadData();
+    }
     public async Task InitializeAsync()
     {
         var result = string.Join(" ", TemporaryEntities.Select(i => i.Message));
@@ -323,6 +399,8 @@ public class MainWindowViewModel : ViewModelBase
 
                     dbService.CloseConnection();
                 }
+                LoadTables();
+
             }
         }
     }
