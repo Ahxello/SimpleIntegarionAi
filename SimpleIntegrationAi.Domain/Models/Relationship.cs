@@ -7,10 +7,19 @@ using System.Threading.Tasks;
 
 namespace SimpleIntegrationAi.Domain.Models
 {
+    public enum RelationshipType
+    {
+        OneToOne,
+        OneToMany,
+        ManyToOne,
+        ManyToMany,
+    }
     public class Relationship
     {
         public string From { get; set; }
         public string To { get; set; }
-        public string Type { get; set; }
+        public string ForeignKey { get; set; }
+        public string ParentKey { get; set; }
+        public RelationshipType Type { get; set; }
     }
 }

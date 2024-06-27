@@ -18,8 +18,9 @@ public class ResponseParser : IResponseParser
     {
     }
 
-    public List<Entity> Parse(string[] lines)
+    public List<Entity> Parse(string filePath)
     {
+        var lines = File.ReadAllLines(filePath);
         var entities = new List<Entity>();
         var relationships = new List<Relationship>();
 
@@ -34,14 +35,14 @@ public class ResponseParser : IResponseParser
         {
             if (line.StartsWith("Entity: ") || line.StartsWith("Entity:"))
             {
-                if (currentEntity != null)
+                if (currentEntity != null && currentEntity.Fields.Count != 0)
                 {
                     entities.Add(currentEntity);
                 }
 
                 currentEntity = new Entity
                 {
-                    Name = line.Substring(8).Trim(), Fields = new List<string>(),
+                    Name = line.Substring(7).Trim(), Fields = new List<string>(),
                     Data = new List<Dictionary<string, string>>()
                 };
                 readingFields = false;
@@ -54,7 +55,7 @@ public class ResponseParser : IResponseParser
             }
             else if (line.StartsWith("Relationships:") || line.StartsWith("Relationships"))
             {
-                if (currentEntity != null)
+                if (currentEntity != null & currentEntity.Fields.Count != 0)
                 {
                     entities.Add(currentEntity);
                 }
@@ -66,11 +67,19 @@ public class ResponseParser : IResponseParser
             else if (line.Contains(" - ") && line.Contains(": "))
             {
                 var parts = line.Split(new[] { " - ", ": " }, StringSplitOptions.None);
-                relationships.Add(new Relationship { From = parts[0], To = parts[1], Type = parts[2] });
+                if (Enum.TryParse(parts[2], out RelationshipType relationshipType))
+                {
+                    relationships.Add(new Relationship { From = parts[0], To = parts[1], Type = relationshipType });
+                }
+                else
+                {
+                    throw new Exception($"Unknown relationship type: {parts[2]}");
+                }
             }
-            else if (line.StartsWith("Детализированный анализ:") || line.StartsWith("Детализированный анализ"))
+            else if (line.StartsWith("Детализированный анализ:") || line.StartsWith("Детализированный анализ") 
+                || line.StartsWith("Detailed Analysis") || line.StartsWith("Detailed Analysis:"))
             {
-                if (currentEntity != null)
+                if (currentEntity != null && currentEntity.Fields.Count != 0)
                 {
                     entities.Add(currentEntity);
                 }
@@ -81,8 +90,10 @@ public class ResponseParser : IResponseParser
             }
             else if (readingFields && !string.IsNullOrWhiteSpace(line))
             {
-                currentEntity.Fields.Add(line.Trim());
+                var field = Regex.Replace(line.Trim(), @"\s*?(?:\(.*?\)|\[.*?\]|\{.*?\})", String.Empty);
+                currentEntity.Fields.Add(field);
             }
+            //Need Fix
             else if (readingData && !string.IsNullOrWhiteSpace(line))
             {
                 if (line.Trim().Contains(":"))
@@ -101,12 +112,11 @@ public class ResponseParser : IResponseParser
             }
         }
 
-        if (currentEntity != null)
+        if (currentEntity != null && currentEntity.Fields.Count != 0)
         {
             entities.Add(currentEntity);
         }
-
-        // Ассоциируем данные с сущностями
+        // Needd Fix
         foreach (var entity in entities)
         {
             if (dataSection.ContainsKey(entity.Name))

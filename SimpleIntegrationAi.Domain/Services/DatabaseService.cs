@@ -36,7 +36,12 @@ public class DatabaseService : IDisposable
 
         foreach (var field in entity.Fields)
         {
-            createTableQuery += $"{field} NVARCHAR(MAX), ";
+            if(field.ToLower().Substring(1).Contains("id"))
+                createTableQuery += $"{field} INT PRIMARY KEY,";
+            else if (field.ToLower().Contains("id"))
+                createTableQuery += $"{field} INT,";
+            else
+                createTableQuery += $"{field} NVARCHAR(MAX), ";
         }
 
         // Удаляем последнюю запятую и пробел
@@ -85,18 +90,7 @@ public class DatabaseService : IDisposable
             }
         }
     }
-    public void AddForeignKey(Relationship relationship)
-    {
-        string addForeignKeyQuery = $@"
-            ALTER TABLE {relationship.From} 
-            ADD CONSTRAINT FK_{relationship.From}_{relationship.To} 
-            FOREIGN KEY ({relationship.Type}) REFERENCES {relationship.To}(Id);";
-
-        using (var command = new SqlCommand(addForeignKeyQuery, _connection))
-        {
-            command.ExecuteNonQuery();
-        }
-    }
+   
     public List<string> GetTableNames()
     {
         var tableNames = new List<string>();
@@ -153,17 +147,12 @@ public class DatabaseService : IDisposable
 
     public DataTable GetData(string tableName)
     {
-        var dataTable = new DataTable();
-
-        using (var command = new SqlCommand($"SELECT * FROM {tableName};", _connection))
+        var data = new DataTable();
+        using (var adapter = new SqlDataAdapter($"SELECT * FROM {tableName};", _connection))
         {
-            using (var adapter = new SqlDataAdapter(command))
-            {
-                adapter.Fill(dataTable);
-            }
+            adapter.Fill(data);
         }
-
-        return dataTable;
+        return data;
     }
     public void AddData(string tableName, DataTable data)
     {
@@ -194,6 +183,8 @@ public class DatabaseService : IDisposable
             }
         }
     }
+
+    //Need Fix else
     public void UpdateData(string tableName, DataTable data)
     {
         if (data == null || data.Rows.Count == 0)
@@ -201,15 +192,51 @@ public class DatabaseService : IDisposable
 
         foreach (DataRow row in data.Rows)
         {
-            if (row.RowState == DataRowState.Modified)
+            var columns = string.Join(",", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+            var values = string.Join(",", row.ItemArray.Select(v => $"'{v}'"));
+            using (var command = new SqlCommand($"UPDATE {tableName} ({columns}) VALUES ({values});", _connection))
             {
-                var setClause = string.Join(",", row.Table.Columns.Cast<DataColumn>().Select(c => $"{c.ColumnName}='{row[c.ColumnName]}'"));
-                var conditions = string.Join(" AND ", row.Table.PrimaryKey.Select(pk => $"{pk.ColumnName}='{row[pk.ColumnName]}'"));
-                using (var command = new SqlCommand($"UPDATE {tableName} SET {setClause} WHERE {conditions};", _connection))
-                {
-                    command.ExecuteNonQuery();
-                }
+                command.ExecuteNonQuery();
             }
+        }
+    }
+    public void DeleteRow(string tableName, string primaryKey, object keyValue)
+    {
+        var deleteQuery = $"DELETE FROM [{tableName}] WHERE [{primaryKey}] = @KeyValue";
+
+        using (var command = new SqlCommand(deleteQuery, _connection))
+        {
+            command.Parameters.AddWithValue("@KeyValue", keyValue);
+            command.ExecuteNonQuery();
+        }
+    }
+
+    
+    public void AddForeignKey(Relationship relationship)
+    {
+        string constraintName = $"FK_{relationship.From}_{relationship.To}";
+        string addForeignKeyQuery;
+
+        switch (relationship.Type)
+        {
+            case RelationshipType.OneToOne:
+                addForeignKeyQuery = $"ALTER TABLE [{relationship.To}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ForeignKey}]) REFERENCES [{relationship.From}] ([{relationship.ParentKey}]);";
+                break;
+            case RelationshipType.OneToMany:
+                addForeignKeyQuery = $"ALTER TABLE [{relationship.To}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ForeignKey}]) REFERENCES [{relationship.From}] ([{relationship.ParentKey}]);";
+                break;
+            case RelationshipType.ManyToOne:
+                addForeignKeyQuery = $"ALTER TABLE [{relationship.From}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ParentKey}]) REFERENCES [{relationship.To}] ([{relationship.ForeignKey}]);";
+                break;
+            case RelationshipType.ManyToMany:
+                throw new NotImplementedException("Many-to-Many relationships require a junction table and additional logic.");
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        using (var command = new SqlCommand(addForeignKeyQuery, _connection))
+        {
+            command.ExecuteNonQuery();
         }
     }
     public void Dispose()

@@ -61,7 +61,8 @@ public class MainWindowViewModel : ViewModelBase
     private readonly Command _addDataCommand;
     private readonly Command _saveDataCommand;
     private DataRowView _selectedDataRow;
-
+    private readonly Command _addForeignKeyCommand;
+    private ObservableCollection<RelationshipType> _relationshipTypes;
     public MainWindowViewModel(IYandexGpt yandexGpt, IResponseParser responseParser, IGeminiGpt geminiGpt)
     {
         _yandexGpt = yandexGpt;
@@ -93,10 +94,27 @@ public class MainWindowViewModel : ViewModelBase
         _saveDataCommand = new Command(SaveData);
 
         FieldTypes = new ObservableCollection<string> { "NVARCHAR(MAX)", "INT", "FLOAT", "DATETIME" }; // Пример типов полей
-        CreateLocalDatabase();
+        _relationshipTypes = new ObservableCollection<RelationshipType>
+    {
+        RelationshipType.OneToOne,
+        RelationshipType.OneToMany,
+        RelationshipType.ManyToOne,
+        RelationshipType.ManyToMany
+    };
+
+    CreateLocalDatabase();
         LoadTables();
     }
 
+    public ObservableCollection<RelationshipType> RelationshipTypes
+    {
+        get => _relationshipTypes;
+        set
+        {
+            SetField(ref _relationshipTypes, value);
+            
+        }
+    }
     public ICommand LoadTablesCommand => _loadTablesCommand;
 
     public ICommand RenameTableCommand => _renameTableCommand;
@@ -122,6 +140,7 @@ public class MainWindowViewModel : ViewModelBase
             SetField(ref _selectedTable, value);
             LoadFields();
             LoadData();
+
         } 
     }
     public ObservableCollection<string> FieldTypes { get; set; }
@@ -177,6 +196,61 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private string _selectedParentEntity;
+    public string SelectedParentEntity
+    {
+        get => _selectedParentEntity;
+        set
+        {
+            SetField(ref _selectedParentEntity, value);
+            
+        }
+    }
+
+    private string _selectedChildEntity;
+    public string SelectedChildEntity
+    {
+        get => _selectedChildEntity;
+        set
+        {
+            SetField(ref _selectedChildEntity, value);
+            
+        }
+    }
+
+    private RelationshipType _selectedRelationshipType;
+    public RelationshipType SelectedRelationshipType
+    {
+        get => _selectedRelationshipType;
+        set
+        {
+            SetField(ref _selectedRelationshipType, value);
+            
+        }
+    }
+
+
+    private string _selectedForeignKey;
+    public string SelectedForeignKey
+    {
+        get => _selectedForeignKey;
+        set
+        {
+          SetField(ref _selectedForeignKey, value);
+          
+        }
+    }
+
+    private string _selectedParentKey;
+    public string SelectedParentKey
+    {
+        get => _selectedParentKey;
+        set
+        {
+            SetField(ref _selectedParentKey, value);
+            
+        }
+    }
     public ICommand LoadFileCommand => _loadFileCommand;
     public ICommand LoadApiResponseCommand => _loadApiResponseCommand;
 
@@ -215,7 +289,7 @@ public class MainWindowViewModel : ViewModelBase
 
         LoadTables();
     }
-
+    
     private void RenameField()
     {
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(SelectedField) || string.IsNullOrEmpty(NewFieldName))
@@ -299,21 +373,35 @@ public class MainWindowViewModel : ViewModelBase
     }
     private void DeleteData()
     {
-        if (SelectedDataRow == null || Data == null)
-            return;
+        if (SelectedDataRow == null) return;
 
+        // Removing the row from DataTable
         SelectedDataRow.Row.Delete();
+
+        using (var helper = new DatabaseService(connectionString))
+        {
+            helper.OpenConnection();
+
+            var primaryKey = Data.Columns[0].ColumnName;
+            var keyValue = SelectedDataRow.Row[primaryKey];
+
+            // Deleting the row from database
+            helper.DeleteRow(SelectedTable, primaryKey, keyValue);
+        }
+
+        // Refreshing the DataGrid
+        LoadData();
     }
     private void SaveData()
     {
-        if (string.IsNullOrEmpty(SelectedTable) || Data == null)
+        if (Data == null || Data.Rows.Count == 0)
             return;
 
+        var tableName = SelectedTable;
         using (var dbHelper = new DatabaseService(connectionString))
         {
             dbHelper.OpenConnection();
             dbHelper.UpdateData(SelectedTable, Data);
-            dbHelper.CloseConnection();
         }
 
         LoadData();
@@ -342,9 +430,6 @@ public class MainWindowViewModel : ViewModelBase
                 "AIzaSyDQFWBEW9yx2wduHg_fE38oOeEgrFOPtI8");
         var json = JObject.Parse(messageCollection);
         var text = json["result"]["alternatives"][0]["message"]["text"].ToString();
-
-
-        TemporaryEntities.Clear();
     }
 
 
@@ -364,10 +449,8 @@ public class MainWindowViewModel : ViewModelBase
                 ComponentInfo.SetLicense("FREE-LIMITED-KEY");
 
                 //var document = DocumentModel.Load(filePath);
-
-                var lines = File.ReadAllLines(filePath);
                 var parser = new ResponseParser();
-                var ents = parser.Parse(lines);
+                var ents = parser.Parse(filePath);
                 using (var dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
@@ -377,26 +460,26 @@ public class MainWindowViewModel : ViewModelBase
                         dbService.CreateTable(entity);
                         dbService.InsertData(entity);
                     }
-
+                   
                     dbService.CloseConnection();
                 }
             }
 
             else if (fileExtension == ".txt")
             {
-                var lines = File.ReadAllLines(filePath);
                 var parser = new ResponseParser();
-                var ents = parser.Parse(lines);
+                var ents = parser.Parse(filePath);
+              
                 using (var dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
-
+яё
                     foreach (var entity in ents)
                     {
                         dbService.CreateTable(entity);
                         dbService.InsertData(entity);
                     }
-
+               
                     dbService.CloseConnection();
                 }
                 LoadTables();
@@ -405,6 +488,25 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void AddForeignKey()
+    {
+        if (string.IsNullOrEmpty(SelectedParentEntity) || string.IsNullOrEmpty(SelectedChildEntity) ||
+            string.IsNullOrEmpty(SelectedForeignKey) || string.IsNullOrEmpty(SelectedParentKey))
+            return;
+
+        using (var helper = new DatabaseService(connectionString))
+        {
+            helper.OpenConnection();
+            helper.AddForeignKey(new Relationship
+            {
+                From = SelectedParentEntity,
+                To = SelectedChildEntity,
+                ForeignKey = SelectedForeignKey,
+                ParentKey = SelectedParentKey,
+                Type = SelectedRelationshipType
+            });
+        }
+    }
     public void CreateLocalDatabase()
     {
         var conString = "Server=localhost;Trusted_Connection=True;";
@@ -419,4 +521,5 @@ public class MainWindowViewModel : ViewModelBase
             connection.Close();
         }
     }
+    
 }
