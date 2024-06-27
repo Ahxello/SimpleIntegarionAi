@@ -3,13 +3,6 @@ using System.Text.RegularExpressions;
 
 namespace SimpleIntegrationAi.Domain.Services;
 
-public enum Cardinality
-{
-    OneToOne,
-    OneToMany,
-    ManyToOne,
-    ManyToMany
-}
 
 public class ResponseParser : IResponseParser
 {
@@ -33,7 +26,7 @@ public class ResponseParser : IResponseParser
 
         foreach (var line in lines)
         {
-            if (line.StartsWith("Entity: ") || line.StartsWith("Entity:"))
+            if ((line.StartsWith("Entity: ") || line.StartsWith("Entity:"))  && readingData == false)
             {
                 if (currentEntity != null && currentEntity.Fields.Count != 0)
                 {
@@ -69,7 +62,20 @@ public class ResponseParser : IResponseParser
                 var parts = line.Split(new[] { " - ", ": " }, StringSplitOptions.None);
                 if (Enum.TryParse(parts[2], out RelationshipType relationshipType))
                 {
-                    relationships.Add(new Relationship { From = parts[0], To = parts[1], Type = relationshipType });
+                    string[] fromParts = parts[0].Split('.');
+                    string fromTable = fromParts[0];
+                    string fromField = fromParts[1];
+
+                    string[] toParts = parts[1].Split(".");
+                    string toTable = toParts[0];
+                    string toField = toParts[1];
+
+                    relationships.Add(new Relationship { 
+                        FromTable = fromTable, 
+                        FromField = fromField, 
+                        ToTable = toTable,
+                        ToField = toField, 
+                        Type = relationshipType });
                 }
                 else
                 {
@@ -96,10 +102,9 @@ public class ResponseParser : IResponseParser
             //Need Fix
             else if (readingData && !string.IsNullOrWhiteSpace(line))
             {
-                if (line.Trim().Contains(":"))
+                if (line.Trim().StartsWith("Entity:") || line.Trim().StartsWith("Entity: "))
                 {
-                    var parts = line.Split(new[] { ": " }, StringSplitOptions.None);
-                    currentDataEntity = parts[1].Trim();
+                    currentDataEntity = line.Substring(7).Trim();
                     if (!dataSection.ContainsKey(currentDataEntity))
                     {
                         dataSection[currentDataEntity] = new List<string>();
@@ -116,7 +121,7 @@ public class ResponseParser : IResponseParser
         {
             entities.Add(currentEntity);
         }
-        // Needd Fix
+
         foreach (var entity in entities)
         {
             if (dataSection.ContainsKey(entity.Name))
@@ -126,22 +131,18 @@ public class ResponseParser : IResponseParser
                     var dataParts = dataLine.Split(new[] { ", " }, StringSplitOptions.None);
                     var dataDict = new Dictionary<string, string>();
 
-                    var idDataParts = dataParts[0].Split(new[] { ": " }, StringSplitOptions.None);
-                    dataDict[entity.Fields[0]] = idDataParts[0].Trim();
-                    dataDict[entity.Fields[1]] = idDataParts[1].Trim();
-
-                    for (int i = 1; i < entity.Fields.Count; i++)
+                    foreach (var dataPart in dataParts)
                     {
-                        if (i < dataParts.Length)
+                        var keyValue = dataPart.Split(new[] { ": " }, StringSplitOptions.None);
+                        if (keyValue.Length == 2)
                         {
-                            dataDict[entity.Fields[i]] = dataParts[i].Trim();
+                            dataDict[keyValue[0].Trim()] = keyValue[1].Trim().Trim('"');
                         }
                     }
 
                     entity.Data.Add(dataDict);
                 }
             }
-
         }
 
         return entities;

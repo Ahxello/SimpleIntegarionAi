@@ -12,5 +12,7 @@ namespace SimpleIntegrationAi.Domain.Models
         public string Name { get; set; }
         public List<string> Fields { get; set; }
         public List<Dictionary<string, string>> Data { get; set; }
+
+        public Relationship Relationship { get; set; }
     }
 }

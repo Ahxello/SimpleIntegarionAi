@@ -16,20 +16,21 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200px"/>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="10">
-            <ComboBox Width="200" ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedTable}" />
             <Button Content="Load Data" Command="{Binding LoadDataCommand}" Margin="5,0" />
             <Button Content="Load File" Command="{Binding LoadApiResponseCommand}" Margin="5,0"/>
         </StackPanel>
+        <ListBox Width="200" Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedTable}" />
 
-        <DataGrid Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Data}" AutoGenerateColumns="True" 
+        <DataGrid Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Data}" AutoGenerateColumns="True" 
                   SelectedItem="{Binding SelectedDataRow}" IsReadOnly="False" Margin="10" />
 
-        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Vertical" Margin="10">
+        <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Vertical" Margin="10">
             <TextBlock Text="Manage Fields" FontWeight="Bold" Margin="0,0,0,10"/>
             <ComboBox Width="150" ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField}" Margin="0,0,0,10" />
             <TextBox Width="150" Text="{Binding NewFieldName}" Margin="0,0,0,10" />

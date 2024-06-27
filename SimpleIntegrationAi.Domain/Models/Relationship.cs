@@ -16,10 +16,10 @@ namespace SimpleIntegrationAi.Domain.Models
     }
     public class Relationship
     {
-        public string From { get; set; }
-        public string To { get; set; }
-        public string ForeignKey { get; set; }
-        public string ParentKey { get; set; }
+        public string FromTable { get; set; }
+        public string ToTable { get; set; }
+        public string FromField { get; set; }
+        public string ToField { get; set; }
         public RelationshipType Type { get; set; }
     }
 }

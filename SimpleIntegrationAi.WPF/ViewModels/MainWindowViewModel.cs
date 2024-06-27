@@ -55,7 +55,6 @@ public class MainWindowViewModel : ViewModelBase
     private string _selectedField;
     private string _selectedTable;
     private ObservableCollection<string> _tables;
-    private ObservableCollection<Product> _temporaryEntities;
     private readonly Command _deleteFieldCommand;
     private readonly Command _deleteDataCommand;
     private readonly Command _addDataCommand;
@@ -67,7 +66,6 @@ public class MainWindowViewModel : ViewModelBase
     {
         _yandexGpt = yandexGpt;
 
-        _temporaryEntities = new ObservableCollection<Product>();
 
         _responseParser = responseParser;
 
@@ -102,7 +100,7 @@ public class MainWindowViewModel : ViewModelBase
         RelationshipType.ManyToMany
     };
 
-    CreateLocalDatabase();
+        CreateLocalDatabase();
         LoadTables();
     }
 
@@ -115,6 +113,7 @@ public class MainWindowViewModel : ViewModelBase
             
         }
     }
+
     public ICommand LoadTablesCommand => _loadTablesCommand;
 
     public ICommand RenameTableCommand => _renameTableCommand;
@@ -254,12 +253,6 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand LoadFileCommand => _loadFileCommand;
     public ICommand LoadApiResponseCommand => _loadApiResponseCommand;
 
-
-    public ObservableCollection<Product> TemporaryEntities
-    {
-        get => _temporaryEntities;
-        set => SetField(ref _temporaryEntities, value);
-    }
 
 
     private void LoadTables()
@@ -422,11 +415,9 @@ public class MainWindowViewModel : ViewModelBase
     }
     public async Task InitializeAsync()
     {
-        var result = string.Join(" ", TemporaryEntities.Select(i => i.Message));
-
         var messageCollection =
             await _geminiGpt.Request(
-                $"{result} Привет, сейчас я отправлю тебе список. Тебе нужно будет его разделить на справочные сущности и обычные сущности, также указать связи между сущностями для реляционной базы данных. Справочная сущность будет иметь только поля Id и Name.\r\nВот примерная структура твоего ответа\r\nEntities: \r\nEntity 1\r\n\tFields\r\nEntity 2\r\n\tFields\r\nEntity 3\r\n\tFields\r\n\r\nRelationships: \r\n Entity 1 - Entity 2: Relationship",
+                $"Привет, сейчас я отправлю тебе список. Тебе нужно будет его разделить на справочные сущности и обычные сущности, также указать связи между сущностями для реляционной базы данных. Справочная сущность будет иметь только поля Id и Name.\r\nВот примерная структура твоего ответа\r\nEntities: \r\nEntity 1\r\n\tFields\r\nEntity 2\r\n\tFields\r\nEntity 3\r\n\tFields\r\n\r\nRelationships: \r\n Entity 1 - Entity 2: Relationship",
                 "AIzaSyDQFWBEW9yx2wduHg_fE38oOeEgrFOPtI8");
         var json = JObject.Parse(messageCollection);
         var text = json["result"]["alternatives"][0]["message"]["text"].ToString();
@@ -473,7 +464,6 @@ public class MainWindowViewModel : ViewModelBase
                 using (var dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
-яё
                     foreach (var entity in ents)
                     {
                         dbService.CreateTable(entity);

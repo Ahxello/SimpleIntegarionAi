@@ -36,12 +36,13 @@ public class DatabaseService : IDisposable
 
         foreach (var field in entity.Fields)
         {
-            if(field.ToLower().Substring(1).Contains("id"))
+            var res = field.ToLower().Substring(0,2);
+            if (field.ToLower().Substring(0,2).Contains("id"))
                 createTableQuery += $"{field} INT PRIMARY KEY,";
             else if (field.ToLower().Contains("id"))
                 createTableQuery += $"{field} INT,";
             else
-                createTableQuery += $"{field} NVARCHAR(MAX), ";
+                createTableQuery += $"{field} NVARCHAR(MAX) NOT NULL, ";
         }
 
         // Удаляем последнюю запятую и пробел
@@ -60,34 +61,40 @@ public class DatabaseService : IDisposable
 
         foreach (var row in entity.Data)
         {
-            string insertQuery = $"INSERT INTO {tableName} (";
-            foreach (var field in entity.Fields)
+            if (row.Count > 0)
             {
-                insertQuery += $"{field}, ";
-            }
-
-            // Удаляем последнюю запятую и пробел
-            insertQuery = insertQuery.TrimEnd(',', ' ');
-            insertQuery += ") VALUES (";
-
-            foreach (var field in entity.Fields)
-            {
-                insertQuery += $"@{field}, ";
-            }
-
-            // Удаляем последнюю запятую и пробел
-            insertQuery = insertQuery.TrimEnd(',', ' ');
-            insertQuery += ");";
-
-            using (var command = new SqlCommand(insertQuery, _connection))
-            {
+                string insertQuery = $"INSERT INTO {tableName} (";
                 foreach (var field in entity.Fields)
                 {
-                    command.Parameters.AddWithValue($"@{field}", row[field]);
+                    insertQuery += $"{field}, ";
                 }
 
-                command.ExecuteNonQuery();
+                // Удаляем последнюю запятую и пробел
+                insertQuery = insertQuery.TrimEnd(',', ' ');
+                insertQuery += ") VALUES (";
+
+                foreach (var field in entity.Fields)
+                {
+                    insertQuery += $"@{field}, ";
+                }
+
+                // Удаляем последнюю запятую и пробел
+                insertQuery = insertQuery.TrimEnd(',', ' ');
+                insertQuery += ");";
+
+                using (var command = new SqlCommand(insertQuery, _connection))
+                {
+                    foreach (var field in entity.Fields)
+                    {
+                        command.Parameters.AddWithValue($"@{field}", row[field]);
+                    }
+
+                    command.ExecuteNonQuery();
+                }
             }
+            else
+                continue;
+            
         }
     }
    

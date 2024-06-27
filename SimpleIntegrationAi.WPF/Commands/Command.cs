@@ -6,8 +6,6 @@ namespace SimpleIntegrationAi.WPF.Commands;
 public class Command : ICommand
 {
     private readonly Action _execute;
-    private Action<Product> deleteProductFromOrder;
-
     public Command(Action execute)
     {
         _execute = execute;
