@@ -11,7 +11,7 @@ public class ResponseParser : IResponseParser
     {
     }
 
-    public List<Entity> Parse(string filePath)
+    public (List<Entity>, List<Relationship>) Parse(string filePath)
     {
         var lines = File.ReadAllLines(filePath);
         var entities = new List<Entity>();
@@ -145,6 +145,6 @@ public class ResponseParser : IResponseParser
             }
         }
 
-        return entities;
+        return (entities, relationships);
     }
 }

@@ -441,17 +441,17 @@ public class MainWindowViewModel : ViewModelBase
 
                 //var document = DocumentModel.Load(filePath);
                 var parser = new ResponseParser();
-                var ents = parser.Parse(filePath);
+                var (entities, relationships) = parser.Parse(filePath);
                 using (var dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
 
-                    foreach (var entity in ents)
+                    foreach (var entity in entities)
                     {
                         dbService.CreateTable(entity);
                         dbService.InsertData(entity);
                     }
-                   
+                    dbService.AddForeignKey(relationships);
                     dbService.CloseConnection();
                 }
             }
@@ -459,42 +459,22 @@ public class MainWindowViewModel : ViewModelBase
             else if (fileExtension == ".txt")
             {
                 var parser = new ResponseParser();
-                var ents = parser.Parse(filePath);
-              
+                var (entities, relationships) = parser.Parse(filePath);
                 using (var dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
-                    foreach (var entity in ents)
+
+                    foreach (var entity in entities)
                     {
                         dbService.CreateTable(entity);
                         dbService.InsertData(entity);
                     }
-               
+                    dbService.AddForeignKey(relationships);
                     dbService.CloseConnection();
                 }
                 LoadTables();
 
             }
-        }
-    }
-
-    private void AddForeignKey()
-    {
-        if (string.IsNullOrEmpty(SelectedParentEntity) || string.IsNullOrEmpty(SelectedChildEntity) ||
-            string.IsNullOrEmpty(SelectedForeignKey) || string.IsNullOrEmpty(SelectedParentKey))
-            return;
-
-        using (var helper = new DatabaseService(connectionString))
-        {
-            helper.OpenConnection();
-            helper.AddForeignKey(new Relationship
-            {
-                From = SelectedParentEntity,
-                To = SelectedChildEntity,
-                ForeignKey = SelectedForeignKey,
-                ParentKey = SelectedParentKey,
-                Type = SelectedRelationshipType
-            });
         }
     }
     public void CreateLocalDatabase()

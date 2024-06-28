@@ -219,32 +219,36 @@ public class DatabaseService : IDisposable
     }
 
     
-    public void AddForeignKey(Relationship relationship)
+    public void AddForeignKey(List<Relationship> relationships)
     {
-        string constraintName = $"FK_{relationship.From}_{relationship.To}";
-        string addForeignKeyQuery;
-
-        switch (relationship.Type)
+        foreach(var relationship in relationships)
         {
-            case RelationshipType.OneToOne:
-                addForeignKeyQuery = $"ALTER TABLE [{relationship.To}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ForeignKey}]) REFERENCES [{relationship.From}] ([{relationship.ParentKey}]);";
-                break;
-            case RelationshipType.OneToMany:
-                addForeignKeyQuery = $"ALTER TABLE [{relationship.To}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ForeignKey}]) REFERENCES [{relationship.From}] ([{relationship.ParentKey}]);";
-                break;
-            case RelationshipType.ManyToOne:
-                addForeignKeyQuery = $"ALTER TABLE [{relationship.From}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ParentKey}]) REFERENCES [{relationship.To}] ([{relationship.ForeignKey}]);";
-                break;
-            case RelationshipType.ManyToMany:
-                throw new NotImplementedException("Many-to-Many relationships require a junction table and additional logic.");
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+            string constraintName = $"FK_{relationship.FromField}_{relationship.ToField}";
+            string addForeignKeyQuery;
 
-        using (var command = new SqlCommand(addForeignKeyQuery, _connection))
-        {
-            command.ExecuteNonQuery();
+            switch (relationship.Type)
+            {
+                case RelationshipType.OneToOne:
+                    addForeignKeyQuery = $"ALTER TABLE [{relationship.ToTable}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ToField}]) REFERENCES [{relationship.FromTable}] ([{relationship.FromField}]) ON DELETE CASCADE ON UPDATE CASCADE;";
+                    break;
+                case RelationshipType.OneToMany:
+                    addForeignKeyQuery = $"ALTER TABLE [{relationship.ToTable}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.ToField}]) REFERENCES [{relationship.FromTable}] ([{relationship.FromField}]) ON DELETE CASCADE ON UPDATE CASCADE;";
+                    break;
+                case RelationshipType.ManyToOne:
+                    addForeignKeyQuery = $"ALTER TABLE [{relationship.FromTable}] ADD CONSTRAINT [{constraintName}] FOREIGN KEY ([{relationship.FromField}]) REFERENCES [{relationship.ToTable}] ([{relationship.ToField}]) ON DELETE CASCADE ON UPDATE CASCADE;";
+                    break;
+                case RelationshipType.ManyToMany:
+                    throw new NotImplementedException("Many-to-Many relationships require a junction table and additional logic.");
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            using (var command = new SqlCommand(addForeignKeyQuery, _connection))
+            {
+                command.ExecuteNonQuery();
+            }
         }
+        
     }
     public void Dispose()
     {
