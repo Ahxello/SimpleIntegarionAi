@@ -19,7 +19,7 @@ public class AsyncCommand : ICommand
     public async void Execute(object? parameter)
     {
         await _execute.Invoke();
-        }
+    }
 
     public event EventHandler? CanExecuteChanged;
 }

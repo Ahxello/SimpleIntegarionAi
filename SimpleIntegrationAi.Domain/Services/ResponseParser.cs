@@ -1,5 +1,6 @@
 ﻿using SimpleIntegrationAi.Domain.Models;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SimpleIntegrationAi.Domain.Services;
 
@@ -7,24 +8,22 @@ namespace SimpleIntegrationAi.Domain.Services;
 public class ResponseParser : IResponseParser
 {
 
-    public ResponseParser()
-    {
-    }
+    public ResponseParser() { }
 
-    public (List<Entity>, List<Relationship>) Parse(string filePath)
+    public (List<Entity>, List<Relationship>) Parse(string responseText)
     {
-        var lines = File.ReadAllLines(filePath);
-        var entities = new List<Entity>();
-        var relationships = new List<Relationship>();
+        string[] lines = Regex.Split(responseText, "\r\n|\r|\n");
+        List<Entity> entities = new List<Entity>();
+        List<Relationship> relationships = new List<Relationship>();
 
         Entity currentEntity = null;
         bool readingFields = false;
         bool readingData = false;
         string currentDataEntity = null;
 
-        var dataSection = new Dictionary<string, List<string>>();
+        Dictionary<string, List<string>> dataSection = new Dictionary<string, List<string>>();
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if ((line.StartsWith("Entity: ") || line.StartsWith("Entity:"))  && readingData == false)
             {
@@ -41,12 +40,14 @@ public class ResponseParser : IResponseParser
                 readingFields = false;
                 readingData = false;
             }
-            else if (line.StartsWith("Fields:") || line.StartsWith("Fields"))
+            else if (line.StartsWith("Fields:") || line.StartsWith("Fields") 
+                || line.StartsWith("Поля") || line.StartsWith("Поля:"))
             {
                 readingFields = true;
                 readingData = false;
             }
-            else if (line.StartsWith("Relationships:") || line.StartsWith("Relationships"))
+            else if (line.StartsWith("Relationships:") || line.StartsWith("Relationships") 
+                || line.StartsWith("Связи") || line.StartsWith("Связи:"))
             {
                 if (currentEntity != null & currentEntity.Fields.Count != 0)
                 {
@@ -59,9 +60,11 @@ public class ResponseParser : IResponseParser
             }
             else if (line.Contains(" - ") && line.Contains(": "))
             {
-                var parts = line.Split(new[] { " - ", ": " }, StringSplitOptions.None);
-                if (Enum.TryParse(parts[2], out RelationshipType relationshipType))
+                string[] parts = line.Split(new[] { " - ", ": " }, StringSplitOptions.None);
+                try
                 {
+                    RelationshipType relationshipType = RelationshipTypeFromString(parts[2]);
+
                     string[] fromParts = parts[0].Split('.');
                     string fromTable = fromParts[0];
                     string fromField = fromParts[1];
@@ -70,16 +73,18 @@ public class ResponseParser : IResponseParser
                     string toTable = toParts[0];
                     string toField = toParts[1];
 
-                    relationships.Add(new Relationship { 
-                        FromTable = fromTable, 
-                        FromField = fromField, 
+                    relationships.Add(new Relationship
+                    {
+                        FromTable = fromTable,
+                        FromField = fromField,
                         ToTable = toTable,
-                        ToField = toField, 
-                        Type = relationshipType });
+                        ToField = toField,
+                        Type = relationshipType
+                    });
                 }
-                else
+                catch (ArgumentException ex)
                 {
-                    throw new Exception($"Unknown relationship type: {parts[2]}");
+                    throw new Exception($"Unknown relationship type: {parts[2]}", ex);
                 }
             }
             else if (line.StartsWith("Детализированный анализ:") || line.StartsWith("Детализированный анализ") 
@@ -96,10 +101,10 @@ public class ResponseParser : IResponseParser
             }
             else if (readingFields && !string.IsNullOrWhiteSpace(line))
             {
-                var field = Regex.Replace(line.Trim(), @"\s*?(?:\(.*?\)|\[.*?\]|\{.*?\})", String.Empty);
+                string field = Regex.Replace(line.Trim(), @"\s*?(?:\(.*?\)|\[.*?\]|\{.*?\})", String.Empty);
                 currentEntity.Fields.Add(field);
             }
-            //Need Fix
+
             else if (readingData && !string.IsNullOrWhiteSpace(line))
             {
                 if (line.Trim().StartsWith("Entity:") || line.Trim().StartsWith("Entity: "))
@@ -122,16 +127,16 @@ public class ResponseParser : IResponseParser
             entities.Add(currentEntity);
         }
 
-        foreach (var entity in entities)
+        foreach (Entity entity in entities)
         {
             if (dataSection.ContainsKey(entity.Name))
             {
                 foreach (var dataLine in dataSection[entity.Name])
                 {
-                    var dataParts = dataLine.Split(new[] { ", " }, StringSplitOptions.None);
-                    var dataDict = new Dictionary<string, string>();
+                    string[] dataParts = dataLine.Split(new[] { ", " }, StringSplitOptions.None);
+                    Dictionary<string, string> dataDict = new Dictionary<string, string>();
 
-                    foreach (var dataPart in dataParts)
+                    foreach (string dataPart in dataParts)
                     {
                         var keyValue = dataPart.Split(new[] { ": " }, StringSplitOptions.None);
                         if (keyValue.Length == 2)
@@ -146,5 +151,29 @@ public class ResponseParser : IResponseParser
         }
 
         return (entities, relationships);
+    }
+    public static RelationshipType RelationshipTypeFromString(string relationship)
+    {
+        switch (relationship.ToLower().Replace("-", "").Replace("_", ""))
+        {
+            case "onetoone":
+                return RelationshipType.OneToOne;
+            case "onetomany":
+                return RelationshipType.OneToMany;
+            case "manytoone":
+                return RelationshipType.ManyToOne;
+            case "manytomany":
+                return RelationshipType.ManyToMany;
+            case "one to one":
+                return RelationshipType.OneToOne;
+            case "one to many":
+                return RelationshipType.OneToMany;
+            case "many to one":
+                return RelationshipType.ManyToOne;
+            case "many to many":
+                return RelationshipType.ManyToMany;
+            default:
+                throw new ArgumentException($"Unknown relationship type: {relationship}");
+        }
     }
 }

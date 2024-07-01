@@ -18,7 +18,6 @@ namespace SimpleIntegrationAi.WPF.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {
-    private readonly IGeminiGpt _geminiGpt;
 
     private readonly AsyncCommand _loadApiResponseCommand;
 
@@ -36,18 +35,10 @@ public class MainWindowViewModel : ViewModelBase
 
     private readonly IResponseParser _responseParser;
 
-    private readonly IYandexGpt _yandexGpt;
+    private readonly IChatGpt _chatGpt;
 
     private readonly string connectionString = "Server=localhost;Database=local_database;Trusted_Connection=True;";
-
-    private readonly string foledrId = "b1gphb1c693npe94nmrv";
-
-    private readonly string iamtoken =
-        "t1.9euelZqYnZ3ImpyelJ6ayZKal5aRz-3rnpWam46WzZKSlMaVjsycjZCZksjl8_dna0pM-e9kdS9d_N3z9ycaSEz572R1L138zef1656Vmp6WxpXNks3Il5GJnsiRkpiY7_zF656Vmp6WxpXNks3Il5GJnsiRkpiY.Xuyhnc6xzrdkOPKi54WTlnMny4T41YI7FVYrOueiPFfjxVuv7fBYLrSJFanKJYAHvq7PrEXYAsnSe3J2iw7vDQ";
-
     private DataTable _data;
-
-
     private ObservableCollection<string> _fields;
     private string _newFieldName;
     private string _newFieldType;
@@ -62,14 +53,13 @@ public class MainWindowViewModel : ViewModelBase
     private DataRowView _selectedDataRow;
     private readonly Command _addForeignKeyCommand;
     private ObservableCollection<RelationshipType> _relationshipTypes;
-    public MainWindowViewModel(IYandexGpt yandexGpt, IResponseParser responseParser, IGeminiGpt geminiGpt)
+    public MainWindowViewModel(IChatGpt chatGpt, IResponseParser responseParser, IGeminiGpt geminiGpt)
     {
-        _yandexGpt = yandexGpt;
+        _chatGpt = chatGpt;
 
 
         _responseParser = responseParser;
 
-        _geminiGpt = geminiGpt;
 
         _loadApiResponseCommand = new AsyncCommand(LoadApiResponse);
 
@@ -320,18 +310,15 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable))
             return;
 
-        using (var dbHelper = new DatabaseService(connectionString))
+        using (DatabaseService dbHelper = new DatabaseService(connectionString))
         {
             dbHelper.OpenConnection();
-            var data = dbHelper.GetData(SelectedTable);
+            DataTable data = dbHelper.GetData(SelectedTable);
             if (data.Rows.Count > 0)
-            {
-                Fields = new ObservableCollection<string>(data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
-            }
+                Fields = new ObservableCollection<string>
+                    (data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
             else
-            {
                 Fields = new ObservableCollection<string>();
-            }
             dbHelper.CloseConnection();
         }
     }
@@ -341,7 +328,7 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(SelectedField))
             return;
 
-        using (var dbHelper = new DatabaseService(connectionString))
+        using (DatabaseService dbHelper = new DatabaseService(connectionString))
         {
             dbHelper.OpenConnection();
             dbHelper.DeleteField(SelectedTable, SelectedField);
@@ -356,10 +343,10 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable))
             return;
 
-        using (var dbHelper = new DatabaseService(connectionString))
+        using (DatabaseService dbHelper = new DatabaseService(connectionString))
         {
             dbHelper.OpenConnection();
-            var data = dbHelper.GetData(SelectedTable);
+            DataTable data = dbHelper.GetData(SelectedTable);
             Data = data;
             dbHelper.CloseConnection();
         }
@@ -375,22 +362,18 @@ public class MainWindowViewModel : ViewModelBase
         {
             helper.OpenConnection();
 
-            var primaryKey = Data.Columns[0].ColumnName;
+            string primaryKey = Data.Columns[0].ColumnName;
             var keyValue = SelectedDataRow.Row[primaryKey];
 
             // Deleting the row from database
             helper.DeleteRow(SelectedTable, primaryKey, keyValue);
         }
-
-        // Refreshing the DataGrid
         LoadData();
     }
     private void SaveData()
     {
         if (Data == null || Data.Rows.Count == 0)
             return;
-
-        var tableName = SelectedTable;
         using (var dbHelper = new DatabaseService(connectionString))
         {
             dbHelper.OpenConnection();
@@ -413,15 +396,6 @@ public class MainWindowViewModel : ViewModelBase
 
         LoadData();
     }
-    public async Task InitializeAsync()
-    {
-        var messageCollection =
-            await _geminiGpt.Request(
-                $"Привет, сейчас я отправлю тебе список. Тебе нужно будет его разделить на справочные сущности и обычные сущности, также указать связи между сущностями для реляционной базы данных. Справочная сущность будет иметь только поля Id и Name.\r\nВот примерная структура твоего ответа\r\nEntities: \r\nEntity 1\r\n\tFields\r\nEntity 2\r\n\tFields\r\nEntity 3\r\n\tFields\r\n\r\nRelationships: \r\n Entity 1 - Entity 2: Relationship",
-                "AIzaSyDQFWBEW9yx2wduHg_fE38oOeEgrFOPtI8");
-        var json = JObject.Parse(messageCollection);
-        var text = json["result"]["alternatives"][0]["message"]["text"].ToString();
-    }
 
 
     private async Task LoadApiResponse()
@@ -432,17 +406,17 @@ public class MainWindowViewModel : ViewModelBase
         };
         if (openFileDialog.ShowDialog() == true)
         {
-            var filePath = openFileDialog.FileName;
-            var fileExtension = Path.GetExtension(filePath);
+            string filePath = openFileDialog.FileName;
+            string fileExtension = Path.GetExtension(filePath);
 
             if (fileExtension == ".docx")
             {
                 ComponentInfo.SetLicense("FREE-LIMITED-KEY");
 
                 //var document = DocumentModel.Load(filePath);
-                var parser = new ResponseParser();
-                var (entities, relationships) = parser.Parse(filePath);
-                using (var dbService = new DatabaseService(connectionString))
+                ResponseParser parser = new ResponseParser();
+                (List<Entity> entities, List<Relationship> relationships) = parser.Parse(filePath);
+                using (DatabaseService dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
 
@@ -458,9 +432,13 @@ public class MainWindowViewModel : ViewModelBase
 
             else if (fileExtension == ".txt")
             {
-                var parser = new ResponseParser();
-                var (entities, relationships) = parser.Parse(filePath);
-                using (var dbService = new DatabaseService(connectionString))
+
+                string fileText = File.ReadAllText(filePath);
+                string responseText =
+                        await _chatGpt.JsonRequest($"{fileText}");
+                ResponseParser parser = new ResponseParser();
+                (List<Entity> entities, List<Relationship> relationships) = parser.Parse(responseText);
+                using (DatabaseService dbService = new DatabaseService(connectionString))
                 {
                     dbService.OpenConnection();
 
@@ -479,11 +457,11 @@ public class MainWindowViewModel : ViewModelBase
     }
     public void CreateLocalDatabase()
     {
-        var conString = "Server=localhost;Trusted_Connection=True;";
-        using (var connection = new SqlConnection(conString))
+        string conString = "Server=localhost;Trusted_Connection=True;";
+        using (SqlConnection connection = new SqlConnection(conString))
         {
             connection.Open();
-            var cmd = new SqlCommand();
+            SqlCommand cmd = new SqlCommand();
             cmd.CommandText =
                 "BEGIN TRY CREATE DATABASE local_database; END TRY BEGIN CATCH IF ERROR_NUMBER() <> 1801 BEGIN THROW; END; END CATCH;";
             cmd.Connection = connection;

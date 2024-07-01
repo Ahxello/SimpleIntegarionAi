@@ -16,8 +16,8 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
-        var serviceProvider = CreateServiceProvider();
-        var window = new MainWindow
+        IServiceProvider serviceProvider = CreateServiceProvider();
+        MainWindow window = new MainWindow
         {
             DataContext = serviceProvider.GetRequiredService<MainWindowViewModel>()
         };
@@ -30,7 +30,7 @@ public partial class App : Application
         IServiceCollection services = new ServiceCollection();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IResponseParser, ResponseParser>();
-        services.AddSingleton<IYandexGpt, YandexGpt>();
+        services.AddSingleton<IChatGpt, ChatGpt>();
         services.AddSingleton<IGeminiGpt, GeminiGpt>();
 
         services.AddScoped<MainWindowViewModel>();

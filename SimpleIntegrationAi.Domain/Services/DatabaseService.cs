@@ -36,7 +36,7 @@ public class DatabaseService : IDisposable
 
         foreach (var field in entity.Fields)
         {
-            var res = field.ToLower().Substring(0,2);
+            string res = field.ToLower().Substring(0,2);
             if (field.ToLower().Substring(0,2).Contains("id"))
                 createTableQuery += $"{field} INT PRIMARY KEY,";
             else if (field.ToLower().Contains("id"))
@@ -49,7 +49,7 @@ public class DatabaseService : IDisposable
         createTableQuery = createTableQuery.TrimEnd(',', ' ');
         createTableQuery += ");";
 
-        using (var command = new SqlCommand(createTableQuery, _connection))
+        using (SqlCommand command = new SqlCommand(createTableQuery, _connection))
         {
             command.ExecuteNonQuery();
         }
@@ -64,7 +64,7 @@ public class DatabaseService : IDisposable
             if (row.Count > 0)
             {
                 string insertQuery = $"INSERT INTO {tableName} (";
-                foreach (var field in entity.Fields)
+                foreach (string field in entity.Fields)
                 {
                     insertQuery += $"{field}, ";
                 }
@@ -73,7 +73,7 @@ public class DatabaseService : IDisposable
                 insertQuery = insertQuery.TrimEnd(',', ' ');
                 insertQuery += ") VALUES (";
 
-                foreach (var field in entity.Fields)
+                foreach (string field in entity.Fields)
                 {
                     insertQuery += $"@{field}, ";
                 }
@@ -82,9 +82,9 @@ public class DatabaseService : IDisposable
                 insertQuery = insertQuery.TrimEnd(',', ' ');
                 insertQuery += ");";
 
-                using (var command = new SqlCommand(insertQuery, _connection))
+                using (SqlCommand command = new SqlCommand(insertQuery, _connection))
                 {
-                    foreach (var field in entity.Fields)
+                    foreach (string field in entity.Fields)
                     {
                         command.Parameters.AddWithValue($"@{field}", row[field]);
                     }
@@ -100,10 +100,10 @@ public class DatabaseService : IDisposable
    
     public List<string> GetTableNames()
     {
-        var tableNames = new List<string>();
+        List<string> tableNames = new List<string>();
         string query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
 
-        using (var command = new SqlCommand(query, _connection))
+        using (SqlCommand command = new SqlCommand(query, _connection))
         using (var reader = command.ExecuteReader())
         {
             while (reader.Read())
@@ -119,7 +119,7 @@ public class DatabaseService : IDisposable
     {
         string query = $"EXEC sp_rename '{oldName}', '{newName}'";
 
-        using (var command = new SqlCommand(query, _connection))
+        using (SqlCommand command = new SqlCommand(query, _connection))
         {
             command.ExecuteNonQuery();
         }
@@ -129,7 +129,7 @@ public class DatabaseService : IDisposable
     {
         string query = $"EXEC sp_rename '{tableName}.{oldFieldName}', '{newFieldName}', 'COLUMN'";
 
-        using (var command = new SqlCommand(query, _connection))
+        using (SqlCommand command = new SqlCommand(query, _connection))
         {
             command.ExecuteNonQuery();
         }
@@ -139,14 +139,14 @@ public class DatabaseService : IDisposable
     {
         string query = $"ALTER TABLE {tableName} ADD {fieldName} {fieldType}";
 
-        using (var command = new SqlCommand(query, _connection))
+        using (SqlCommand command = new SqlCommand(query, _connection))
         {
             command.ExecuteNonQuery();
         }
     }
     public void DeleteField(string tableName, string fieldName)
     {
-        using (var command = new SqlCommand($"ALTER TABLE {tableName} DROP COLUMN {fieldName};", _connection))
+        using (SqlCommand command = new SqlCommand($"ALTER TABLE {tableName} DROP COLUMN {fieldName};", _connection))
         {
             command.ExecuteNonQuery();
         }
@@ -154,8 +154,8 @@ public class DatabaseService : IDisposable
 
     public DataTable GetData(string tableName)
     {
-        var data = new DataTable();
-        using (var adapter = new SqlDataAdapter($"SELECT * FROM {tableName};", _connection))
+        DataTable data = new DataTable();
+        using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * FROM {tableName};", _connection))
         {
             adapter.Fill(data);
         }
@@ -168,8 +168,8 @@ public class DatabaseService : IDisposable
 
         foreach (DataRow row in data.Rows)
         {
-            var columns = string.Join(",", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
-            var values = string.Join(",", row.ItemArray.Select(v => $"'{v}'"));
+            string columns = string.Join(",", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+            string values = string.Join(",", row.ItemArray.Select(v => $"'{v}'"));
             using (var command = new SqlCommand($"INSERT INTO {tableName} ({columns}) VALUES ({values});", _connection))
             {
                 command.ExecuteNonQuery();
@@ -183,7 +183,7 @@ public class DatabaseService : IDisposable
 
         foreach (DataRow row in data.Rows)
         {
-            var conditions = string.Join(" AND ", data.Columns.Cast<DataColumn>().Select(c => $"{c.ColumnName}='{row[c.ColumnName]}'"));
+            string conditions = string.Join(" AND ", data.Columns.Cast<DataColumn>().Select(c => $"{c.ColumnName}='{row[c.ColumnName]}'"));
             using (var command = new SqlCommand($"DELETE FROM {tableName} WHERE {conditions};", _connection))
             {
                 command.ExecuteNonQuery();
@@ -199,9 +199,9 @@ public class DatabaseService : IDisposable
 
         foreach (DataRow row in data.Rows)
         {
-            var columns = string.Join(",", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
-            var values = string.Join(",", row.ItemArray.Select(v => $"'{v}'"));
-            using (var command = new SqlCommand($"UPDATE {tableName} ({columns}) VALUES ({values});", _connection))
+            string columns = string.Join(",", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+            string values = string.Join(",", row.ItemArray.Select(v => $"'{v}'"));
+            using (SqlCommand command = new SqlCommand($"UPDATE {tableName} ({columns}) VALUES ({values});", _connection))
             {
                 command.ExecuteNonQuery();
             }
@@ -209,9 +209,9 @@ public class DatabaseService : IDisposable
     }
     public void DeleteRow(string tableName, string primaryKey, object keyValue)
     {
-        var deleteQuery = $"DELETE FROM [{tableName}] WHERE [{primaryKey}] = @KeyValue";
+        string deleteQuery = $"DELETE FROM [{tableName}] WHERE [{primaryKey}] = @KeyValue";
 
-        using (var command = new SqlCommand(deleteQuery, _connection))
+        using (SqlCommand command = new SqlCommand(deleteQuery, _connection))
         {
             command.Parameters.AddWithValue("@KeyValue", keyValue);
             command.ExecuteNonQuery();
@@ -223,7 +223,7 @@ public class DatabaseService : IDisposable
     {
         foreach(var relationship in relationships)
         {
-            string constraintName = $"FK_{relationship.FromField}_{relationship.ToField}";
+            string constraintName = $"FK_{relationship.FromTable}{relationship.FromField}_{relationship.ToTable}{relationship.ToField}";
             string addForeignKeyQuery;
 
             switch (relationship.Type)
@@ -243,7 +243,7 @@ public class DatabaseService : IDisposable
                     throw new ArgumentOutOfRangeException();
             }
 
-            using (var command = new SqlCommand(addForeignKeyQuery, _connection))
+            using (SqlCommand command = new SqlCommand(addForeignKeyQuery, _connection))
             {
                 command.ExecuteNonQuery();
             }
