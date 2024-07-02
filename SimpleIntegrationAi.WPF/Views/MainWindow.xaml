@@ -25,6 +25,7 @@
             <Button Content="Load Data" Command="{Binding LoadDataCommand}" Margin="5,0" />
             <Button Content="Load File" Command="{Binding LoadApiResponseCommand}" Margin="5,0"/>
         </StackPanel>
+
         <ListBox Width="200" Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedTable}" />
 
         <DataGrid Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Data}" AutoGenerateColumns="True" 
@@ -47,16 +48,6 @@
             <Button Content="Save Data" Command="{Binding SaveDataCommand}" Margin="0,0,0,10" />
 
             <Separator Margin="10,0"/>
-
-            <TextBlock Text="Manage Relationships" FontWeight="Bold" Margin="0,10,0,10"/>
-            <ComboBox Width="150" ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedParentEntity}"  Margin="0,0,0,10" />
-            <ComboBox Width="150" ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedChildEntity}"  Margin="0,0,0,10" />
-            <TextBox Width="150"  Text="{Binding SelectedForeignKey}" Margin="0,0,0,10" />
-            <TextBox Width="150"  Text="{Binding SelectedParentKey}" Margin="0,0,0,10" />
-            <ComboBox Width="150" ItemsSource="{Binding RelationshipTypes}" SelectedItem="{Binding SelectedRelationshipType}" Margin="0,0,0,10" />
-            <Button Content="Add Relationship" Command="{Binding AddForeignKeyCommand}" Margin="0,0,0,10" />
-        
-        
         </StackPanel>
     </Grid>
 </Window>

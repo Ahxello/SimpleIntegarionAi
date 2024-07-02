@@ -18,7 +18,8 @@ namespace SimpleIntegrationAi.WPF.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {
-
+    private ObservableCollection<Entity> _entities;
+    private ObservableCollection<Relationship> _relationships;
     private readonly AsyncCommand _loadApiResponseCommand;
 
     private readonly Command _loadTablesCommand;
@@ -90,7 +91,8 @@ public class MainWindowViewModel : ViewModelBase
         RelationshipType.ManyToMany
     };
 
-        CreateLocalDatabase();
+        _entities = new ObservableCollection<Entity>();
+        _relationships = new ObservableCollection<Relationship>();
         LoadTables();
     }
 
@@ -100,10 +102,25 @@ public class MainWindowViewModel : ViewModelBase
         set
         {
             SetField(ref _relationshipTypes, value);
-            
+
         }
     }
-
+    public ObservableCollection<Entity> Entities
+    {
+        get => _entities;
+        set
+        {
+            SetField(ref _entities, value);
+        }
+    }
+    public ObservableCollection<Relationship> Relationships
+    {
+        get => _relationships;
+        set
+        {
+            SetField(ref _relationships, value);
+        }
+    }
     public ICommand LoadTablesCommand => _loadTablesCommand;
 
     public ICommand RenameTableCommand => _renameTableCommand;
@@ -247,13 +264,7 @@ public class MainWindowViewModel : ViewModelBase
 
     private void LoadTables()
     {
-        using (var dbHelper = new DatabaseService(connectionString))
-        {
-            dbHelper.OpenConnection();
-            var tables = dbHelper.GetTableNames();
-            Tables = new ObservableCollection<string>(tables);
-            dbHelper.CloseConnection();
-        }
+        Tables = new ObservableCollection<string>(_entities.Select(e => e.Name));
         LoadFields();
         LoadData();
     }
@@ -263,26 +274,28 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(NewTableName))
             return;
 
-        using (var dbHelper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            dbHelper.RenameTable(SelectedTable, NewTableName);
-            dbHelper.CloseConnection();
+            entity.Name = NewTableName;
         }
 
         LoadTables();
     }
-    
+
     private void RenameField()
     {
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(SelectedField) || string.IsNullOrEmpty(NewFieldName))
             return;
 
-        using (var dbHelper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            dbHelper.RenameField(SelectedTable, SelectedField, NewFieldName);
-            dbHelper.CloseConnection();
+            var fieldIndex = entity.Fields.IndexOf(SelectedField);
+            if (fieldIndex != -1)
+            {
+                entity.Fields[fieldIndex] = NewFieldName;
+            }
         }
 
         LoadFields();
@@ -294,11 +307,10 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(NewFieldName) || string.IsNullOrEmpty(NewFieldType))
             return;
 
-        using (var dbHelper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            dbHelper.AddField(SelectedTable, NewFieldName, NewFieldType);
-            dbHelper.CloseConnection();
+            entity.Fields.Add(NewFieldName);
         }
 
         LoadFields();
@@ -310,16 +322,14 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable))
             return;
 
-        using (DatabaseService dbHelper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            DataTable data = dbHelper.GetData(SelectedTable);
-            if (data.Rows.Count > 0)
-                Fields = new ObservableCollection<string>
-                    (data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
-            else
-                Fields = new ObservableCollection<string>();
-            dbHelper.CloseConnection();
+            Fields = new ObservableCollection<string>(entity.Fields);
+        }
+        else
+        {
+            Fields = new ObservableCollection<string>();
         }
     }
 
@@ -328,75 +338,121 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(SelectedField))
             return;
 
-        using (DatabaseService dbHelper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            dbHelper.DeleteField(SelectedTable, SelectedField);
-            dbHelper.CloseConnection();
+            entity.Fields.Remove(SelectedField);
         }
 
         LoadFields();
         LoadData();
     }
+
     private void LoadData()
     {
         if (string.IsNullOrEmpty(SelectedTable))
             return;
 
-        using (DatabaseService dbHelper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            DataTable data = dbHelper.GetData(SelectedTable);
-            Data = data;
-            dbHelper.CloseConnection();
+            var dataTable = new DataTable();
+            foreach (var field in entity.Fields)
+            {
+                dataTable.Columns.Add(field);
+            }
+
+            foreach (var data in entity.Data)
+            {
+                var row = dataTable.NewRow();
+                foreach (var field in entity.Fields)
+                {
+                    if (data.ContainsKey(field))
+                    {
+                        row[field] = data[field];
+                    }
+                    else
+                    {
+                        row[field] = DBNull.Value;
+                    }
+                }
+                dataTable.Rows.Add(row);
+            }
+
+            Data = dataTable;
         }
     }
+
     private void DeleteData()
     {
         if (SelectedDataRow == null) return;
 
-        // Removing the row from DataTable
-        SelectedDataRow.Row.Delete();
-
-        using (var helper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            helper.OpenConnection();
-
-            string primaryKey = Data.Columns[0].ColumnName;
-            var keyValue = SelectedDataRow.Row[primaryKey];
-
-            // Deleting the row from database
-            helper.DeleteRow(SelectedTable, primaryKey, keyValue);
+            var row = entity.Data.FirstOrDefault(d => d["ID"] == SelectedDataRow.Row["ID"].ToString());
+            if (row != null)
+            {
+                entity.Data.Remove(row);
+            }
         }
+
         LoadData();
     }
+
     private void SaveData()
     {
         if (Data == null || Data.Rows.Count == 0)
             return;
-        using (var dbHelper = new DatabaseService(connectionString))
+
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            dbHelper.UpdateData(SelectedTable, Data);
+            entity.Data.Clear();
+            foreach (DataRow row in Data.Rows)
+            {
+                var data = new Dictionary<string, string>();
+                foreach (DataColumn column in Data.Columns)
+                {
+                    data[column.ColumnName] = row[column].ToString();
+                }
+                entity.Data.Add(data);
+            }
         }
 
         LoadData();
     }
+
     private void AddData()
     {
         if (string.IsNullOrEmpty(SelectedTable))
             return;
 
-        using (var dbHelper = new DatabaseService(connectionString))
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
         {
-            dbHelper.OpenConnection();
-            dbHelper.AddData(SelectedTable, Data);
-            dbHelper.CloseConnection();
+            var data = new Dictionary<string, string>();
+            foreach (var field in entity.Fields)
+            {
+                data[field] = GetDefaultValueForType(field).ToString();
+            }
+            entity.Data.Add(data);
         }
 
         LoadData();
     }
 
+    private object GetDefaultValueForType(string type)
+    {
+        return type switch
+        {
+            "NVARCHAR(MAX)" => "",
+            "INT" => 0,
+            "FLOAT" => 0.0,
+            "DATETIME" => DateTime.Now.ToString(),
+            _ => null
+        };
+    }
 
     private async Task LoadApiResponse()
     {
@@ -413,61 +469,23 @@ public class MainWindowViewModel : ViewModelBase
             {
                 ComponentInfo.SetLicense("FREE-LIMITED-KEY");
 
-                //var document = DocumentModel.Load(filePath);
                 ResponseParser parser = new ResponseParser();
                 (List<Entity> entities, List<Relationship> relationships) = parser.Parse(filePath);
-                using (DatabaseService dbService = new DatabaseService(connectionString))
-                {
-                    dbService.OpenConnection();
-
-                    foreach (var entity in entities)
-                    {
-                        dbService.CreateTable(entity);
-                        dbService.InsertData(entity);
-                    }
-                    dbService.AddForeignKey(relationships);
-                    dbService.CloseConnection();
-                }
+                _entities = new ObservableCollection<Entity>(entities);
+                _relationships = new ObservableCollection<Relationship>(relationships);
             }
-
             else if (fileExtension == ".txt")
             {
-
                 string fileText = File.ReadAllText(filePath);
-                string responseText =
-                        await _chatGpt.JsonRequest($"{fileText}");
+                string responseText = await _chatGpt.JsonRequest($"{fileText}");
+
                 ResponseParser parser = new ResponseParser();
                 (List<Entity> entities, List<Relationship> relationships) = parser.Parse(responseText);
-                using (DatabaseService dbService = new DatabaseService(connectionString))
-                {
-                    dbService.OpenConnection();
-
-                    foreach (var entity in entities)
-                    {
-                        dbService.CreateTable(entity);
-                        dbService.InsertData(entity);
-                    }
-                    dbService.AddForeignKey(relationships);
-                    dbService.CloseConnection();
-                }
-                LoadTables();
-
+                _entities = new ObservableCollection<Entity>(entities);
+                _relationships = new ObservableCollection<Relationship>(relationships);
             }
+            LoadTables();
         }
     }
-    public void CreateLocalDatabase()
-    {
-        string conString = "Server=localhost;Trusted_Connection=True;";
-        using (SqlConnection connection = new SqlConnection(conString))
-        {
-            connection.Open();
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText =
-                "BEGIN TRY CREATE DATABASE local_database; END TRY BEGIN CATCH IF ERROR_NUMBER() <> 1801 BEGIN THROW; END; END CATCH;";
-            cmd.Connection = connection;
-            cmd.ExecuteNonQuery();
-            connection.Close();
-        }
-    }
-    
+
 }

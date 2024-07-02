@@ -9,7 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Styles\" />
+    <Compile Remove="Styles\**" />
+    <EmbeddedResource Remove="Styles\**" />
+    <None Remove="Styles\**" />
+    <Page Remove="Styles\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="ViewModels\Factories\" />
   </ItemGroup>
 
@@ -28,7 +34,7 @@
 
   <ItemGroup>
     <Reference Include="AiTestLibrary">
-      <HintPath>..\..\AiTestLibrary\bin\Debug\net8.0\AiTestLibrary.dll</HintPath>
+      <HintPath>..\..\..\AiTestLibrary\bin\Debug\net8.0\AiTestLibrary.dll</HintPath>
     </Reference>
   </ItemGroup>
 
