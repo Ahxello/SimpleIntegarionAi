@@ -37,6 +37,7 @@
             <TextBox Width="150" Text="{Binding NewFieldName}" Margin="0,0,0,10" />
             <ComboBox Width="150" ItemsSource="{Binding FieldTypes}" SelectedItem="{Binding NewFieldType}" Margin="0,0,0,10" />
             <Button Content="Add Field" Command="{Binding AddFieldCommand}" Margin="0,0,0,10" />
+            <Button Content="Add 5 Fields" Command="{Binding AddFiveFieldsCommand}" Margin="0,0,0,10" />
             <Button Content="Delete Field" Command="{Binding DeleteFieldCommand}" Margin="0,0,0,10" />
             <Button Content="Rename Field" Command="{Binding RenameFieldCommand}" Margin="0,0,0,10" />
 

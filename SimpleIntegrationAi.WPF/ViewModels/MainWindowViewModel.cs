@@ -34,33 +34,48 @@ public class MainWindowViewModel : ViewModelBase
 
     private readonly AsyncCommand _loadFileCommand;
 
+    private readonly AsyncCommand _addFiveFieldsCommand;
+
+    private readonly Command _deleteFieldCommand;
+
+    private readonly Command _deleteDataCommand;
+
+    private readonly Command _addDataCommand;
+
+    private readonly Command _saveDataCommand;
+
+    private readonly Command _addForeignKeyCommand;
+
     private readonly IResponseParser _responseParser;
 
     private readonly IChatGpt _chatGpt;
 
     private readonly string connectionString = "Server=localhost;Database=local_database;Trusted_Connection=True;";
+    
     private DataTable _data;
+    
     private ObservableCollection<string> _fields;
+    
     private string _newFieldName;
+    
     private string _newFieldType;
+    
     private string _newTableName;
+    
     private string _selectedField;
+   
     private string _selectedTable;
+    
     private ObservableCollection<string> _tables;
-    private readonly Command _deleteFieldCommand;
-    private readonly Command _deleteDataCommand;
-    private readonly Command _addDataCommand;
-    private readonly Command _saveDataCommand;
+    
     private DataRowView _selectedDataRow;
-    private readonly Command _addForeignKeyCommand;
+
     private ObservableCollection<RelationshipType> _relationshipTypes;
     public MainWindowViewModel(IChatGpt chatGpt, IResponseParser responseParser, IGeminiGpt geminiGpt)
     {
         _chatGpt = chatGpt;
 
-
         _responseParser = responseParser;
-
 
         _loadApiResponseCommand = new AsyncCommand(LoadApiResponse);
 
@@ -82,7 +97,10 @@ public class MainWindowViewModel : ViewModelBase
 
         _saveDataCommand = new Command(SaveData);
 
+        _addFiveFieldsCommand = new AsyncCommand(AddFiveFields);
+
         FieldTypes = new ObservableCollection<string> { "NVARCHAR(MAX)", "INT", "FLOAT", "DATETIME" }; // Пример типов полей
+       
         _relationshipTypes = new ObservableCollection<RelationshipType>
     {
         RelationshipType.OneToOne,
@@ -90,9 +108,11 @@ public class MainWindowViewModel : ViewModelBase
         RelationshipType.ManyToOne,
         RelationshipType.ManyToMany
     };
-
+        
         _entities = new ObservableCollection<Entity>();
+       
         _relationships = new ObservableCollection<Relationship>();
+        
         LoadTables();
     }
 
@@ -105,6 +125,7 @@ public class MainWindowViewModel : ViewModelBase
 
         }
     }
+    
     public ObservableCollection<Entity> Entities
     {
         get => _entities;
@@ -113,6 +134,7 @@ public class MainWindowViewModel : ViewModelBase
             SetField(ref _entities, value);
         }
     }
+    
     public ObservableCollection<Relationship> Relationships
     {
         get => _relationships;
@@ -121,7 +143,10 @@ public class MainWindowViewModel : ViewModelBase
             SetField(ref _relationships, value);
         }
     }
+    
     public ICommand LoadTablesCommand => _loadTablesCommand;
+
+    public ICommand AddFiveFieldsCommand => _addFiveFieldsCommand;
 
     public ICommand RenameTableCommand => _renameTableCommand;
 
@@ -138,6 +163,7 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand LoadDataCommand => _loadDataCommand;
 
     public ICommand SaveDataCommand => _saveDataCommand;
+    
     public string SelectedTable
     {
         get => _selectedTable;
@@ -149,7 +175,9 @@ public class MainWindowViewModel : ViewModelBase
 
         } 
     }
+    
     public ObservableCollection<string> FieldTypes { get; set; }
+    
     public string NewTableName
     {
         get => _newTableName;
@@ -248,6 +276,7 @@ public class MainWindowViewModel : ViewModelBase
     }
 
     private string _selectedParentKey;
+    
     public string SelectedParentKey
     {
         get => _selectedParentKey;
@@ -257,10 +286,10 @@ public class MainWindowViewModel : ViewModelBase
             
         }
     }
+    
     public ICommand LoadFileCommand => _loadFileCommand;
+    
     public ICommand LoadApiResponseCommand => _loadApiResponseCommand;
-
-
 
     private void LoadTables()
     {
@@ -316,7 +345,20 @@ public class MainWindowViewModel : ViewModelBase
         LoadFields();
         LoadData();
     }
+    private async Task AddFiveFields()
+    {
+        if (string.IsNullOrEmpty(SelectedTable))
+            return;
 
+        Entity entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
+        {
+            string newFields = await _chatGpt.AddFields(entity.Name, entity.Fields);
+
+        }
+        LoadFields();
+        LoadData();
+    }
     private void LoadFields()
     {
         if (string.IsNullOrEmpty(SelectedTable))
