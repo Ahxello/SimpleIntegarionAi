@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 using AiTestLibrary.Interfaces;
@@ -354,6 +355,11 @@ public class MainWindowViewModel : ViewModelBase
         if (entity != null)
         {
             string newFields = await _chatGpt.AddFields(entity.Name, entity.Fields);
+            string[] lines = Regex.Split(newFields, "\r\n|\r|\n");
+            foreach (string line in lines) 
+            {
+                entity.Fields.Add(line);
+            }
 
         }
         LoadFields();
