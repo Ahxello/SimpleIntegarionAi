@@ -3,7 +3,6 @@ using AiTestLibrary.Classes;
 using AiTestLibrary.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleIntegrationAi.Domain.Services;
-using SimpleIntegrationAi.WPF.Dialogs.Services;
 using SimpleIntegrationAi.WPF.ViewModels;
 using SimpleIntegrationAi.WPF.Views;
 
@@ -28,7 +27,6 @@ public partial class App : Application
     private IServiceProvider CreateServiceProvider()
     {
         IServiceCollection services = new ServiceCollection();
-        services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IResponseParser, ResponseParser>();
         services.AddSingleton<IChatGpt, ChatGpt>();
         services.AddSingleton<IGeminiGpt, GeminiGpt>();

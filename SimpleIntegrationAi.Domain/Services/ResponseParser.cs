@@ -172,6 +172,14 @@ public class ResponseParser : IResponseParser
                 return RelationshipType.ManyToOne;
             case "many to many":
                 return RelationshipType.ManyToMany;
+            case "one-to-one":
+                return RelationshipType.OneToOne;
+            case "one-to-many":
+                return RelationshipType.OneToMany;
+            case "many-to-one":
+                return RelationshipType.ManyToOne;
+            case "many-to-many":
+                return RelationshipType.ManyToMany;
             default:
                 throw new ArgumentException($"Unknown relationship type: {relationship}");
         }

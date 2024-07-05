@@ -32,7 +32,7 @@
 
   <ItemGroup>
     <Reference Include="AiTestLibrary">
-      <HintPath>..\..\..\AiTestLibrary\bin\Debug\net8.0\AiTestLibrary.dll</HintPath>
+      <HintPath>..\..\AiTestLibrary\bin\Debug\net8.0\AiTestLibrary.dll</HintPath>
     </Reference>
   </ItemGroup>
 

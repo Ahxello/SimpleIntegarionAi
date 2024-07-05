@@ -45,7 +45,7 @@ public class MainWindowViewModel : ViewModelBase
 
     private readonly Command _saveDataCommand;
 
-    private readonly Command _addForeignKeyCommand;
+    private readonly AsyncCommand _addRelatedEntitiesCommand;
 
     private readonly IResponseParser _responseParser;
 
@@ -100,6 +100,8 @@ public class MainWindowViewModel : ViewModelBase
 
         _addFiveFieldsCommand = new AsyncCommand(AddFiveFields);
 
+        _addRelatedEntitiesCommand = new AsyncCommand(AddRelatedEntities);
+
         FieldTypes = new ObservableCollection<string> { "NVARCHAR(MAX)", "INT", "FLOAT", "DATETIME" }; // Пример типов полей
        
         _relationshipTypes = new ObservableCollection<RelationshipType>
@@ -144,7 +146,8 @@ public class MainWindowViewModel : ViewModelBase
             SetField(ref _relationships, value);
         }
     }
-    
+
+    public ICommand AddRelatedEntitiesCommand => _addRelatedEntitiesCommand;
     public ICommand LoadTablesCommand => _loadTablesCommand;
 
     public ICommand AddFiveFieldsCommand => _addFiveFieldsCommand;
@@ -230,63 +233,6 @@ public class MainWindowViewModel : ViewModelBase
             
         }
     }
-
-    private string _selectedParentEntity;
-    public string SelectedParentEntity
-    {
-        get => _selectedParentEntity;
-        set
-        {
-            SetField(ref _selectedParentEntity, value);
-            
-        }
-    }
-
-    private string _selectedChildEntity;
-    public string SelectedChildEntity
-    {
-        get => _selectedChildEntity;
-        set
-        {
-            SetField(ref _selectedChildEntity, value);
-            
-        }
-    }
-
-    private RelationshipType _selectedRelationshipType;
-    public RelationshipType SelectedRelationshipType
-    {
-        get => _selectedRelationshipType;
-        set
-        {
-            SetField(ref _selectedRelationshipType, value);
-            
-        }
-    }
-
-
-    private string _selectedForeignKey;
-    public string SelectedForeignKey
-    {
-        get => _selectedForeignKey;
-        set
-        {
-          SetField(ref _selectedForeignKey, value);
-          
-        }
-    }
-
-    private string _selectedParentKey;
-    
-    public string SelectedParentKey
-    {
-        get => _selectedParentKey;
-        set
-        {
-            SetField(ref _selectedParentKey, value);
-            
-        }
-    }
     
     public ICommand LoadFileCommand => _loadFileCommand;
     
@@ -294,6 +240,8 @@ public class MainWindowViewModel : ViewModelBase
 
     private void LoadTables()
     {
+        if (Tables != null) Tables.Clear();
+
         Tables = new ObservableCollection<string>(_entities.Select(e => e.Name));
         LoadFields();
         LoadData();
@@ -364,6 +312,34 @@ public class MainWindowViewModel : ViewModelBase
         }
         LoadFields();
         LoadData();
+    }
+
+    private async Task AddRelatedEntities()
+    {
+        if (string.IsNullOrEmpty(SelectedTable))
+            return;
+        string entityNames = "";
+        if (Entities != null)
+        {
+            foreach (Entity entity in Entities)
+            {
+                entityNames += entity.Name + ",";
+            }
+            string newEntities = await _chatGpt.AddRelatedEntities(entityNames);
+            (List<Entity> entities, List<Relationship> relationships) =
+                    _responseParser.Parse(newEntities);
+
+            foreach (Entity entity in entities)
+            {
+                _entities.Add(entity);
+            }
+            foreach (Relationship relationship in relationships)
+            {
+                _relationships.Add(relationship);
+            }
+
+        }
+        LoadTables();
     }
     private void LoadFields()
     {
@@ -513,12 +489,13 @@ public class MainWindowViewModel : ViewModelBase
             string filePath = openFileDialog.FileName;
             string fileExtension = Path.GetExtension(filePath);
 
+            // Не доделан 
             if (fileExtension == ".docx")
             {
                 ComponentInfo.SetLicense("FREE-LIMITED-KEY");
 
-                ResponseParser parser = new ResponseParser();
-                (List<Entity> entities, List<Relationship> relationships) = parser.Parse(filePath);
+                (List<Entity> entities, List<Relationship> relationships) = 
+                    _responseParser.Parse(filePath);
                 _entities = new ObservableCollection<Entity>(entities);
                 _relationships = new ObservableCollection<Relationship>(relationships);
             }
@@ -527,8 +504,8 @@ public class MainWindowViewModel : ViewModelBase
                 string fileText = File.ReadAllText(filePath);
                 string responseText = await _chatGpt.JsonRequest($"{fileText}");
 
-                ResponseParser parser = new ResponseParser();
-                (List<Entity> entities, List<Relationship> relationships) = parser.Parse(responseText);
+                (List<Entity> entities, List<Relationship> relationships) = 
+                    _responseParser.Parse(responseText);
                 _entities = new ObservableCollection<Entity>(entities);
                 _relationships = new ObservableCollection<Relationship>(relationships);
             }
