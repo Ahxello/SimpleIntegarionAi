@@ -6,5 +6,6 @@ namespace SimpleIntegrationAi.Domain.Services;
 
 public interface IResponseParser
 {
-    (List<Entity>, List<Relationship>) Parse (string filePath);
+    (List<Entity>, List<Relationship>) Parse (string text);
+    List<EntityGroup> ParseGroups (string text, List<Entity> entities);
 }

@@ -1,4 +1,5 @@
 ﻿using SimpleIntegrationAi.Domain.Models;
+using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -183,5 +184,47 @@ public class ResponseParser : IResponseParser
             default:
                 throw new ArgumentException($"Unknown relationship type: {relationship}");
         }
+    }
+    public List<EntityGroup> ParseGroups(string responseText, List<Entity> entities)
+    {
+        string[] lines = Regex.Split(responseText, "\r\n|\r|\n");
+        List<EntityGroup> groups = new List<EntityGroup>();
+        EntityGroup currentGroup = null;
+        string currentGroupName = null;
+
+        foreach (string line in lines)
+        {
+            if (line.StartsWith("Group: "))
+            {
+                if (currentGroup != null && currentGroup.Entities.Count > 0)
+                {
+                    groups.Add(currentGroup);
+                }
+
+                currentGroupName = line.Substring(7).Trim();
+                currentGroup = new EntityGroup
+                {
+                    GroupName = currentGroupName,
+                    Entities = new ObservableCollection<Entity>()
+                };
+            }
+            else if ((line.StartsWith("Entity: ") || line.StartsWith("Entity:")) && currentGroup != null)
+            {
+                string entityName = line.Substring(7).Trim();
+                Entity entity = entities.FirstOrDefault(e => e.Name == entityName);
+                if (entity != null)
+                {
+                    entity.GroupName = currentGroupName;
+                    currentGroup.Entities.Add(entity);
+                }
+            }
+        }
+
+        if (currentGroup != null && currentGroup.Entities.Count > 0)
+        {
+            groups.Add(currentGroup);
+        }
+
+        return groups;
     }
 }

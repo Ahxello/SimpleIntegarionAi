@@ -24,7 +24,18 @@
             <Button Content="Load File" Command="{Binding LoadApiResponseCommand}" Margin="5,0"/>
         </StackPanel>
 
-        <ListBox Width="200" Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Tables}" SelectedItem="{Binding SelectedTable}" />
+        <TreeView Grid.Row="1" Grid.Column="0" ItemsSource="{Binding EntityGroups}" SelectedItemChanged="TreeView_SelectedItemChanged">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Entities}">
+                    <TextBlock Text="{Binding GroupName}"/>
+                    <HierarchicalDataTemplate.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                    </HierarchicalDataTemplate.ItemTemplate>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
 
         <DataGrid Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Data}" AutoGenerateColumns="True" 
                   SelectedItem="{Binding SelectedDataRow}" IsReadOnly="False" Margin="10" />
@@ -41,13 +52,15 @@
 
             <Separator Margin="10,0"/>
 
+            <Button Content="Add Related Entities" Command="{Binding AddRelatedEntitiesCommand}" Margin="0,10,0,10" />
+
             <!--<TextBlock Text="Manage Data" FontWeight="Bold" Margin="0,10,0,10"/>
             <Button Content="Add Data" Command="{Binding AddDataCommand}" Margin="0,0,0,10" />
             <Button Content="Delete Data" Command="{Binding DeleteDataCommand}" Margin="0,0,0,10" />
             <Button Content="Save Data" Command="{Binding SaveDataCommand}" Margin="0,0,0,10" />
 
             <Separator Margin="10,0"/>-->
-            <Button Content="Add Related Entities" Command="{Binding AddRelatedEntitiesCommand}" Margin="0,10,0,10" />
+
         </StackPanel>
     </Grid>
 </Window>

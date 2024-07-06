@@ -19,8 +19,12 @@ namespace SimpleIntegrationAi.WPF.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {
+    private ObservableCollection<EntityGroup> _entityGroups;
+
     private ObservableCollection<Entity> _entities;
+
     private ObservableCollection<Relationship> _relationships;
+
     private readonly AsyncCommand _loadApiResponseCommand;
 
     private readonly Command _loadTablesCommand;
@@ -28,6 +32,8 @@ public class MainWindowViewModel : ViewModelBase
     private readonly Command _renameTableCommand;
 
     private readonly Command _renameFieldCommand;
+
+    private readonly Command _entitySelectedCommand;
 
     private readonly Command _addFieldCommand;
 
@@ -66,7 +72,9 @@ public class MainWindowViewModel : ViewModelBase
     private string _selectedField;
    
     private string _selectedTable;
-    
+
+    private Entity _selectedEntity;
+
     private ObservableCollection<string> _tables;
     
     private DataRowView _selectedDataRow;
@@ -102,6 +110,8 @@ public class MainWindowViewModel : ViewModelBase
 
         _addRelatedEntitiesCommand = new AsyncCommand(AddRelatedEntities);
 
+        _entitySelectedCommand = new Command(EntitySelected);
+
         FieldTypes = new ObservableCollection<string> { "NVARCHAR(MAX)", "INT", "FLOAT", "DATETIME" }; // Пример типов полей
        
         _relationshipTypes = new ObservableCollection<RelationshipType>
@@ -115,7 +125,8 @@ public class MainWindowViewModel : ViewModelBase
         _entities = new ObservableCollection<Entity>();
        
         _relationships = new ObservableCollection<Relationship>();
-        
+        _entityGroups = new ObservableCollection<EntityGroup>();
+
         LoadTables();
     }
 
@@ -137,7 +148,14 @@ public class MainWindowViewModel : ViewModelBase
             SetField(ref _entities, value);
         }
     }
-    
+    public ObservableCollection<EntityGroup> EntityGroups
+    {
+        get => _entityGroups;
+        set
+        {
+            SetField(ref _entityGroups, value);
+        }
+    }
     public ObservableCollection<Relationship> Relationships
     {
         get => _relationships;
@@ -167,7 +185,8 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand LoadDataCommand => _loadDataCommand;
 
     public ICommand SaveDataCommand => _saveDataCommand;
-    
+    public ICommand EntitySelectedCommand => _entitySelectedCommand;
+
     public string SelectedTable
     {
         get => _selectedTable;
@@ -240,13 +259,36 @@ public class MainWindowViewModel : ViewModelBase
 
     private void LoadTables()
     {
-        if (Tables != null) Tables.Clear();
+        if (EntityGroups != null) EntityGroups.Clear();
 
-        Tables = new ObservableCollection<string>(_entities.Select(e => e.Name));
+        var groups = _entities.GroupBy(e => e.GroupName).Select(g => new EntityGroup
+        {
+            GroupName = g.Key,
+            Entities = new ObservableCollection<Entity>(g)
+        });
+
+        EntityGroups = new ObservableCollection<EntityGroup>(groups);
+        //if (Tables != null) Tables.Clear();
+
+        //Tables = new ObservableCollection<string>(_entities.Select(e => e.Name));
         LoadFields();
         LoadData();
     }
+    private void LoadFields()
+    {
+        if (string.IsNullOrEmpty(SelectedTable))
+            return;
 
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
+        {
+            Fields = new ObservableCollection<string>(entity.Fields);
+        }
+        else
+        {
+            Fields = new ObservableCollection<string>();
+        }
+    }
     private void RenameTable()
     {
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(NewTableName))
@@ -259,6 +301,41 @@ public class MainWindowViewModel : ViewModelBase
         }
 
         LoadTables();
+    }
+
+    private void LoadData()
+    {
+        if (string.IsNullOrEmpty(SelectedTable))
+            return;
+
+        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (entity != null)
+        {
+            var dataTable = new DataTable();
+            foreach (var field in entity.Fields)
+            {
+                dataTable.Columns.Add(field);
+            }
+
+            foreach (var data in entity.Data)
+            {
+                var row = dataTable.NewRow();
+                foreach (var field in entity.Fields)
+                {
+                    if (data.ContainsKey(field))
+                    {
+                        row[field] = data[field];
+                    }
+                    else
+                    {
+                        row[field] = DBNull.Value;
+                    }
+                }
+                dataTable.Rows.Add(row);
+            }
+
+            Data = dataTable;
+        }
     }
 
     private void RenameField()
@@ -341,21 +418,7 @@ public class MainWindowViewModel : ViewModelBase
         }
         LoadTables();
     }
-    private void LoadFields()
-    {
-        if (string.IsNullOrEmpty(SelectedTable))
-            return;
-
-        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
-        if (entity != null)
-        {
-            Fields = new ObservableCollection<string>(entity.Fields);
-        }
-        else
-        {
-            Fields = new ObservableCollection<string>();
-        }
-    }
+    
 
     private void DeleteField()
     {
@@ -370,41 +433,6 @@ public class MainWindowViewModel : ViewModelBase
 
         LoadFields();
         LoadData();
-    }
-
-    private void LoadData()
-    {
-        if (string.IsNullOrEmpty(SelectedTable))
-            return;
-
-        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
-        if (entity != null)
-        {
-            var dataTable = new DataTable();
-            foreach (var field in entity.Fields)
-            {
-                dataTable.Columns.Add(field);
-            }
-
-            foreach (var data in entity.Data)
-            {
-                var row = dataTable.NewRow();
-                foreach (var field in entity.Fields)
-                {
-                    if (data.ContainsKey(field))
-                    {
-                        row[field] = data[field];
-                    }
-                    else
-                    {
-                        row[field] = DBNull.Value;
-                    }
-                }
-                dataTable.Rows.Add(row);
-            }
-
-            Data = dataTable;
-        }
     }
 
     private void DeleteData()
@@ -496,7 +524,9 @@ public class MainWindowViewModel : ViewModelBase
 
                 (List<Entity> entities, List<Relationship> relationships) = 
                     _responseParser.Parse(filePath);
+
                 _entities = new ObservableCollection<Entity>(entities);
+
                 _relationships = new ObservableCollection<Relationship>(relationships);
             }
             else if (fileExtension == ".txt")
@@ -506,10 +536,34 @@ public class MainWindowViewModel : ViewModelBase
 
                 (List<Entity> entities, List<Relationship> relationships) = 
                     _responseParser.Parse(responseText);
+
+                string entityNames = "";
+                if (entities != null)
+                {
+                    foreach (Entity entity in entities)
+                    {
+                        entityNames += entity.Name + ",";
+                    }
+                }
+                string responseGroupText = await _chatGpt.DivideIntoGroups(entityNames);
+
+                List<EntityGroup> groups = _responseParser.ParseGroups(responseGroupText, entities);
+
+                _entityGroups = new ObservableCollection<EntityGroup>(groups);
+
                 _entities = new ObservableCollection<Entity>(entities);
+
                 _relationships = new ObservableCollection<Relationship>(relationships);
             }
             LoadTables();
+        }
+
+    }
+    private void EntitySelected()
+    {
+        if (_selectedEntity is Entity entity)
+        {
+            SelectedTable = entity.Name;
         }
     }
 
