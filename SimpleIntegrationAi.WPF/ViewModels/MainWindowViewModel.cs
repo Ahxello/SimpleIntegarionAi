@@ -108,7 +108,7 @@ public class MainWindowViewModel : ViewModelBase
 
         _addFiveFieldsCommand = new AsyncCommand(AddFiveFields);
 
-        _addRelatedEntitiesCommand = new AsyncCommand(AddRelatedEntities);
+        _addRelatedEntitiesCommand = new AsyncCommand(AddRelatedEntitiesForGroup);
 
         _entitySelectedCommand = new Command(EntitySelected);
 
@@ -268,9 +268,7 @@ public class MainWindowViewModel : ViewModelBase
         });
 
         EntityGroups = new ObservableCollection<EntityGroup>(groups);
-        //if (Tables != null) Tables.Clear();
 
-        //Tables = new ObservableCollection<string>(_entities.Select(e => e.Name));
         LoadFields();
         LoadData();
     }
@@ -391,30 +389,31 @@ public class MainWindowViewModel : ViewModelBase
         LoadData();
     }
 
-    private async Task AddRelatedEntities()
+    private async Task AddRelatedEntitiesForGroup()
     {
         if (string.IsNullOrEmpty(SelectedTable))
             return;
-        string entityNames = "";
-        if (Entities != null)
-        {
-            foreach (Entity entity in Entities)
-            {
-                entityNames += entity.Name + ",";
-            }
-            string newEntities = await _chatGpt.AddRelatedEntities(entityNames);
-            (List<Entity> entities, List<Relationship> relationships) =
+        Entity selectedEntity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        if (selectedEntity == null)
+            return;
+
+        string groupName = selectedEntity.GroupName;
+
+        string entityNames = string.Join(",", _entities.Where(e => e.GroupName == groupName).Select(e => e.Name));
+
+        string newEntities = await _chatGpt.AddRelatedEntitiesForGroup(entityNames,groupName);
+
+        (List<Entity> entities, List<Relationship> relationships) =
                     _responseParser.Parse(newEntities);
 
-            foreach (Entity entity in entities)
-            {
-                _entities.Add(entity);
-            }
-            foreach (Relationship relationship in relationships)
-            {
-                _relationships.Add(relationship);
-            }
-
+        foreach (Entity ent in entities)
+        {
+            ent.GroupName = groupName;
+            _entities.Add(ent);
+        }
+        foreach (Relationship relationship in relationships)
+        {
+            _relationships.Add(relationship);
         }
         LoadTables();
     }
@@ -425,7 +424,7 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable) || string.IsNullOrEmpty(SelectedField))
             return;
 
-        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        Entity entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
         if (entity != null)
         {
             entity.Fields.Remove(SelectedField);
@@ -439,7 +438,7 @@ public class MainWindowViewModel : ViewModelBase
     {
         if (SelectedDataRow == null) return;
 
-        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        Entity entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
         if (entity != null)
         {
             var row = entity.Data.FirstOrDefault(d => d["ID"] == SelectedDataRow.Row["ID"].ToString());
@@ -457,13 +456,13 @@ public class MainWindowViewModel : ViewModelBase
         if (Data == null || Data.Rows.Count == 0)
             return;
 
-        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        Entity entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
         if (entity != null)
         {
             entity.Data.Clear();
             foreach (DataRow row in Data.Rows)
             {
-                var data = new Dictionary<string, string>();
+                Dictionary<string, string> data = new Dictionary<string, string>();
                 foreach (DataColumn column in Data.Columns)
                 {
                     data[column.ColumnName] = row[column].ToString();
@@ -480,10 +479,10 @@ public class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedTable))
             return;
 
-        var entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
+        Entity entity = _entities.FirstOrDefault(e => e.Name == SelectedTable);
         if (entity != null)
         {
-            var data = new Dictionary<string, string>();
+            Dictionary<string, string> data = new Dictionary<string, string>();
             foreach (var field in entity.Fields)
             {
                 data[field] = GetDefaultValueForType(field).ToString();
@@ -502,7 +501,7 @@ public class MainWindowViewModel : ViewModelBase
             "INT" => 0,
             "FLOAT" => 0.0,
             "DATETIME" => DateTime.Now.ToString(),
-            _ => null
+            _ => "" // Если тип неизвестен, возвращаем пустую строку как значение по умолчанию
         };
     }
 
@@ -549,7 +548,7 @@ public class MainWindowViewModel : ViewModelBase
 
                 List<EntityGroup> groups = _responseParser.ParseGroups(responseGroupText, entities);
 
-                _entityGroups = new ObservableCollection<EntityGroup>(groups);
+
 
                 _entities = new ObservableCollection<Entity>(entities);
 

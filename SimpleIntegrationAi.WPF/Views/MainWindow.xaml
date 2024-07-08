@@ -52,14 +52,14 @@
 
             <Separator Margin="10,0"/>
 
-            <Button Content="Add Related Entities" Command="{Binding AddRelatedEntitiesCommand}" Margin="0,10,0,10" />
+            <Button Content="Add Related Entities For Group" Command="{Binding AddRelatedEntitiesCommand}" Margin="0,10,0,10" />
 
-            <!--<TextBlock Text="Manage Data" FontWeight="Bold" Margin="0,10,0,10"/>
+            <TextBlock Text="Manage Data" FontWeight="Bold" Margin="0,10,0,10"/>
             <Button Content="Add Data" Command="{Binding AddDataCommand}" Margin="0,0,0,10" />
             <Button Content="Delete Data" Command="{Binding DeleteDataCommand}" Margin="0,0,0,10" />
             <Button Content="Save Data" Command="{Binding SaveDataCommand}" Margin="0,0,0,10" />
 
-            <Separator Margin="10,0"/>-->
+            <Separator Margin="10,0"/>
 
         </StackPanel>
     </Grid>
